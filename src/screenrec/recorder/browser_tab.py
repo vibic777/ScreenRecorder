@@ -5,10 +5,9 @@ import secrets
 import subprocess
 import threading
 import time
-from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from uuid import uuid4
+from screenrec.config.filenames import reserve
 from urllib.parse import urlsplit, parse_qs
 
 from PySide6.QtCore import QThread, Signal
@@ -178,12 +177,13 @@ class BrowserWorker(QThread):
     def run(self):
         session, audio, parts = None, None, None
         error = None
+        reservation = None
         tracks = []
         try:
             directory = Path(self.settings.output_dir)
             directory.mkdir(parents=True, exist_ok=True)
-            stem = datetime.now().strftime("ScreenRec_tab_%Y-%m-%d_%H-%M-%S_") + uuid4().hex[:8]
-            output = directory / f"{stem}.{self.settings.file_format}"
+            output, reservation = reserve(directory, self.settings)
+            stem = output.stem
             parts = directory / f".{stem}.parts"
             parts.mkdir()
             raw = parts / "tab.webm"
@@ -275,6 +275,11 @@ class BrowserWorker(QThread):
                 try:
                     audio.finish(check=False)
                 except Exception:
+                    pass
+            if reservation:
+                try:
+                    reservation.rmdir()
+                except OSError:
                     pass
             if error:
                 self.failed.emit(f"{error}\nПромежуточные файлы: {parts}" if parts else error)

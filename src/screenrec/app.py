@@ -48,6 +48,9 @@ class ScreenRecApp(SourceController, QObject):
         self.configure_action = settings_menu.addAction("Конфигуратор записи…")
         self.configure_action.triggered.connect(self.configure_recording)
         self.window.configure.clicked.connect(self.configure_recording)
+        self.filename_action = settings_menu.addAction("Имя файла…")
+        self.filename_action.triggered.connect(self.configure_filename)
+        self.window.filename_button.clicked.connect(self.configure_filename)
         self.overlay_action = settings_menu.addAction("Картинка и текст…")
         self.overlay_action.triggered.connect(self.configure_overlay)
         self.window.overlay_button.clicked.connect(self.configure_overlay)
@@ -88,6 +91,15 @@ class ScreenRecApp(SourceController, QObject):
         self.refresh_monitors()
         self.update_summary()
         self.initialize_sources()
+
+    def configure_filename(self):
+        if self.worker:
+            return
+        from .ui.filename_dialog import FilenameDialog
+        dialog = FilenameDialog(self.settings, self.window)
+        if dialog.exec():
+            self.settings = dialog.result_settings()
+            self.save_settings()
 
     def set_overlay_enabled(self, enabled):
         self.settings.overlay_enabled = enabled
@@ -173,6 +185,8 @@ class ScreenRecApp(SourceController, QObject):
         self.window.stop.setEnabled(busy)
         self.stop_action.setEnabled(busy)
         self.configure_action.setEnabled(not busy)
+        self.filename_action.setEnabled(not busy)
+        self.window.filename_button.setEnabled(not busy)
         self.overlay_action.setEnabled(not busy)
         self.window.overlay_button.setEnabled(not busy)
         self.window.overlay_enabled.setEnabled(not busy)

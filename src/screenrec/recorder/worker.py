@@ -1,8 +1,7 @@
 import threading
 import time
-from datetime import datetime
 from pathlib import Path
-from uuid import uuid4
+from screenrec.config.filenames import reserve
 
 from PySide6.QtCore import QThread, Signal
 
@@ -33,6 +32,7 @@ class RecordingWorker(QThread):
 
     def run(self):
         path = None
+        reservation = None
         error = None
         frames = 0
         audio = None
@@ -40,8 +40,7 @@ class RecordingWorker(QThread):
         tracks = []
         try:
             self.directory.mkdir(parents=True, exist_ok=True)
-            name = datetime.now().strftime("ScreenRec_%Y-%m-%d_%H-%M-%S")
-            path = self.directory / f"{name}_{uuid4().hex[:8]}.{self.settings.file_format}"
+            path, reservation = reserve(self.directory, self.settings)
             video = path
             if self.settings.audio_mode != "none":
                 parts = self.directory / f".{path.stem}.parts"
@@ -100,6 +99,11 @@ class RecordingWorker(QThread):
                 parts.rmdir()
             except Exception as exc:
                 error = str(exc)
+        if reservation:
+            try:
+                reservation.rmdir()
+            except OSError:
+                pass
         if error:
             suffix = f"\nФайл может быть неполным: {path}" if path and path.exists() else ""
             if parts:
