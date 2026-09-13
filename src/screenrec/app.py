@@ -207,6 +207,7 @@ class ScreenRecApp(SourceController, QObject):
         self.set_busy(False)
 
     def set_busy(self, busy):
+        self.window.recordings.set_recording(busy)
         can_start = not busy and bool(self.current_source())
         self.window.start.setEnabled(can_start)
         self.start_action.setEnabled(can_start)
@@ -226,6 +227,7 @@ class ScreenRecApp(SourceController, QObject):
         if folder:
             self.settings.output_dir = folder
             self.window.folder.setText(folder)
+            self.window.recordings.set_directory(folder)
             self.save_settings()
 
     def open_folder(self):
@@ -303,6 +305,7 @@ class ScreenRecApp(SourceController, QObject):
         log.info("Recording saved: %s",path)
         self.window.status.setText(f"Сохранено: {path}")
         self.notify("Запись сохранена", path)
+        self.window.recordings.refresh(select=path)
 
     def worker_finished(self):
         self.worker.wait()
@@ -338,6 +341,8 @@ class ScreenRecApp(SourceController, QObject):
             self.show_window()
 
     def close_window(self):
+        self.window.recordings.leave_fullscreen()
+        self.window.recordings.stop_playback()
         log.debug("Window close requested; close_to_tray=%s",self.settings.close_to_tray)
         if self.settings.close_to_tray and QSystemTrayIcon.isSystemTrayAvailable():
             self.tray.show()
@@ -372,6 +377,7 @@ class ScreenRecApp(SourceController, QObject):
                 if encoder:
                     encoder.abort()
                 self.worker.wait()
+        self.window.recordings.shutdown()
         self.tray.hide()
         log.info("Application cleanup complete")
         close_log()
