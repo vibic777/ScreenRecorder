@@ -39,8 +39,9 @@ def main():
     pending.mkdir(parents=True, exist_ok=True)
     run(sys.executable, "-m", "pip", "check")
     run(sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v")
-    run(sys.executable, "scripts/build.py")
-    shutil.copy2(root / "dist/ScreenRec.exe", pending / "ScreenRec.exe")
+    build_output = root / "build" / f"release-{version}"
+    run(sys.executable, "scripts/build.py", "--output-dir", str(build_output))
+    shutil.copy2(build_output / "ScreenRec.exe", pending / "ScreenRec.exe")
     env = dict(os.environ)
     env.pop("PYTHONPATH", None)
     env.pop("IMAGEIO_FFMPEG_EXE", None)
