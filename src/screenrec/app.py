@@ -48,6 +48,10 @@ class ScreenRecApp(SourceController, QObject):
         self.configure_action = settings_menu.addAction("Конфигуратор записи…")
         self.configure_action.triggered.connect(self.configure_recording)
         self.window.configure.clicked.connect(self.configure_recording)
+        self.overlay_action = settings_menu.addAction("Картинка и текст…")
+        self.overlay_action.triggered.connect(self.configure_overlay)
+        self.window.overlay_button.clicked.connect(self.configure_overlay)
+        self.window.overlay_enabled.toggled.connect(self.set_overlay_enabled)
         notifications = settings_menu.addAction("Уведомления")
         notifications.setCheckable(True)
         notifications.setChecked(self.settings.notifications)
@@ -84,6 +88,27 @@ class ScreenRecApp(SourceController, QObject):
         self.refresh_monitors()
         self.update_summary()
         self.initialize_sources()
+
+    def set_overlay_enabled(self, enabled):
+        self.settings.overlay_enabled = enabled
+        self.save_settings()
+
+    def configure_overlay(self):
+        if self.worker:
+            return
+        from .ui.overlay_editor import OverlayEditor
+        from .recorder.overlay import enabled
+        source = self.current_source() or {}
+        aspect = source.get("width", 16) / max(1, source.get("height", 9))
+        dialog = OverlayEditor(self.settings, self.window, aspect)
+        if dialog.exec():
+            self.settings.overlay = dialog.template
+            self.settings.overlay_name = dialog.names.currentText().strip()
+            self.settings.overlay_enabled = enabled(dialog.template)
+            self.window.overlay_enabled.blockSignals(True)
+            self.window.overlay_enabled.setChecked(self.settings.overlay_enabled)
+            self.window.overlay_enabled.blockSignals(False)
+            self.save_settings()
 
     def set_theme(self, name, *, save=True):
         name = name if name in THEMES else "blue"
@@ -148,6 +173,9 @@ class ScreenRecApp(SourceController, QObject):
         self.window.stop.setEnabled(busy)
         self.stop_action.setEnabled(busy)
         self.configure_action.setEnabled(not busy)
+        self.overlay_action.setEnabled(not busy)
+        self.window.overlay_button.setEnabled(not busy)
+        self.window.overlay_enabled.setEnabled(not busy)
         for widget in (self.window.monitors, self.window.refresh, self.window.fps, self.window.browse, self.window.configure, self.window.source_mode, self.window.window_list, self.window.select_region, self.window.export_extension):
             widget.setEnabled(not busy)
 

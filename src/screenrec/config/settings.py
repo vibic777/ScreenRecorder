@@ -4,6 +4,7 @@ from pathlib import Path
 
 from platformdirs import user_config_path, user_videos_path
 from .recording import FORMATS, QUALITIES, AUDIO_MODES
+from .templates import default_template
 
 
 @dataclass
@@ -18,6 +19,9 @@ class Settings:
     microphone_id: str = ""
     system_device_id: str = ""
     audio_bitrate: int = 192
+    overlay_enabled: bool = False
+    overlay_name: str = ""
+    overlay: dict = field(default_factory=default_template)
     theme: str = "blue"
     source_mode: str = "monitor"
     region: dict = field(default_factory=dict)
@@ -48,6 +52,8 @@ class Settings:
                 settings.source_mode = "monitor"
             if settings.audio_bitrate not in (96, 128, 192, 256, 320):
                 settings.audio_bitrate = 192
+            from .templates import validate
+            settings.overlay = validate(settings.overlay)
             return settings
         except (OSError, ValueError, AttributeError):
             return cls()
