@@ -5,6 +5,8 @@ from pathlib import Path
 
 from imageio_ffmpeg import get_ffmpeg_exe
 from screenrec.config.recording import video_options
+from screenrec.logger.logger import get_logger
+log = get_logger(__name__)
 
 
 class Encoder:
@@ -23,6 +25,7 @@ class Encoder:
             except BaseException:
                 self.overlay_directory.cleanup()
                 raise
+        log.debug("Encoder setup: width=%s height=%s fps=%s format=%s overlays=%s",width,height,fps,file_format,overlay_path is not None)
         inputs, options = ffmpeg_options(video_options(file_format, quality, fps), overlay_path)
         self.errors = tempfile.TemporaryFile()
         self.process = None
@@ -47,6 +50,7 @@ class Encoder:
 
     def abort(self):
         if self.process.poll() is None:
+            log.critical("Encoder timeout: terminating process")
             self.timed_out = True
             self.process.kill()
 
@@ -62,7 +66,9 @@ class Encoder:
             code = self.process.wait(timeout=20)
             self.errors.seek(0)
             diagnostic = self.errors.read().decode("utf-8", errors="replace").strip()
+            log.debug("Encoder exit: code=%s timed_out=%s",code,self.timed_out)
             if code or self.timed_out:
+                log.error("Encoder finalization failed")
                 raise RuntimeError(diagnostic or "Кодировщик не завершил запись вовремя.")
         finally:
             watchdog.cancel()

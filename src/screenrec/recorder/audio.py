@@ -61,6 +61,9 @@ def _capture(kind, device_id, path, ready, gate, stop, result):
         result.put((str(path), 0, message))
 
 
+from screenrec.logger.logger import get_logger
+log = get_logger(__name__)
+
 class AudioSession:
     def __init__(self, settings, directory):
         self.context = mp.get_context("spawn")
@@ -81,6 +84,7 @@ class AudioSession:
             self.items.append((process, ready, result))
 
     def prepare(self):
+        log.debug("Preparing audio sources: count=%s",len(self.items))
         try:
             for process, _, _ in self.items:
                 process.start()
@@ -96,6 +100,7 @@ class AudioSession:
             raise
 
     def start(self, origin):
+        log.info("Audio capture started")
         self.origin = origin
         self.gate.set()
 
@@ -115,6 +120,7 @@ class AudioSession:
                 continue
             process.join(3)
             if process.is_alive():
+                log.warning("Audio source timeout; terminating child process")
                 process.terminate()
                 process.join(3)
                 if process.is_alive():
@@ -132,6 +138,8 @@ class AudioSession:
                     errors.append("Аудиоустройство не вернуло запись.")
             ready.close()
             result.close()
+        log.debug("Audio capture finished: tracks=%s errors=%s",len(tracks),len(errors))
         if errors and check:
+            log.error("Audio capture failed")
             raise RuntimeError("\n".join(errors))
         return tracks

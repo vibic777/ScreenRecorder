@@ -99,8 +99,23 @@ def run(arguments):
             dialog = SettingsDialog(settings, controller.window)
             assert dialog.result_settings() == settings
             dialog.deleteLater()
+            from .ui.logging_dialog import LoggingDialog
+            logging_dialog = LoggingDialog(settings,controller.window)
+            assert not logging_dialog.enabled.isChecked()
+            logging_dialog.grab().save(str(directory / "logging-editor.png"))
+            logging_dialog.deleteLater()
             controller.timer.stop()
             controller.cleanup()
+        from .logger.logger import configure as configure_log, get_logger, get_default_log_path, LEVELS
+        import sys
+        if getattr(sys,"frozen",False):
+            assert get_default_log_path().parent == Path(sys.executable).resolve().parent
+        log_path = directory / "diagnostic.log"
+        actual, warning = configure_log(True,str(log_path),list(LEVELS))
+        assert actual == log_path and warning is None
+        diagnostic_log = get_logger("selftest")
+        for name,number in LEVELS.items():
+            diagnostic_log.logger.log(number,"SELFTEST_LEVEL_%s",name)
         errors, saved, started = [], [], []
         worker = RecordingWorker(monitor, directory, 15, settings=settings)
         worker.failed.connect(errors.append)
@@ -141,13 +156,23 @@ def run(arguments):
                                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         info = probe.stderr.decode(errors="replace")
         assert ("Audio:" in info) == (args.audio != "none"), info
+        configure_log(False)
+        log_text = log_path.read_text(encoding="utf-8")
+        for name in LEVELS:
+            assert "SELFTEST_LEVEL_" + name in log_text
+        assert "Encoder setup" in log_text and "Capture worker starting" in log_text
+        before = log_path.read_bytes()
+        diagnostic_log.fatal_error("DISABLED_SENTINEL")
+        assert log_path.read_bytes() == before
         report.write_text(json.dumps({"ok": True, "file": video, "frames": count, "seconds": duration,
-                                     "audio": args.audio, "overlays": True, "ffmpeg": get_ffmpeg_exe(), "streams": info}, ensure_ascii=False, indent=2), encoding="utf-8")
+                                     "audio": args.audio, "overlays": True, "logging": True, "ffmpeg": get_ffmpeg_exe(), "streams": info}, ensure_ascii=False, indent=2), encoding="utf-8")
         return 0
     except Exception:
         report.write_text(json.dumps({"ok": False, "error": traceback.format_exc()}, ensure_ascii=False, indent=2), encoding="utf-8")
         return 1
     finally:
+        from .logger.logger import shutdown as shutdown_log
+        shutdown_log()
         if worker and worker.isRunning():
             worker.stop()
             encoder = worker.encoder

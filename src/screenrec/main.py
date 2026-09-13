@@ -16,12 +16,22 @@ def main():
 
     application = QApplication(sys.argv)
     application.setApplicationName("ScreenRec")
-    controller = ScreenRecApp(application)
+    try:
+        controller = ScreenRecApp(application)
+    except Exception as exc:
+        from .logger.logger import get_logger, shutdown as close_log
+        from PySide6.QtWidgets import QMessageBox
+        get_logger(__name__).fatal_error("Application startup failed",exc_info=True)
+        close_log()
+        QMessageBox.critical(None,"ScreenRec","Не удалось запустить приложение: " + str(exc))
+        return 1
 
     def shutdown(*_):
         controller.request_exit(confirm=False)
 
     def exception_hook(kind, value, tb):
+        from .logger.logger import get_logger
+        get_logger(__name__).fatal_error("Unhandled application exception",exc_info=(kind,value,tb))
         traceback.print_exception(kind, value, tb)
         shutdown()
 

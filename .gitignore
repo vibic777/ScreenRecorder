@@ -7,3 +7,5 @@ dist/
 .test-output/
 
 releases/
+
+*.log.[123]

@@ -10,6 +10,8 @@ from .screen import ScreenSource
 from .audio import AudioSession
 from .muxer import mux_audio
 from screenrec.config.settings import Settings
+from screenrec.logger.logger import get_logger
+log = get_logger(__name__)
 
 
 class RecordingWorker(QThread):
@@ -31,6 +33,7 @@ class RecordingWorker(QThread):
         self.stop_event.set()
 
     def run(self):
+        log.info("Capture worker starting: source=%s format=%s fps=%s audio=%s",self.monitor.get("kind","monitor"),self.settings.file_format,self.fps,self.settings.audio_mode)
         path = None
         reservation = None
         error = None
@@ -55,6 +58,7 @@ class RecordingWorker(QThread):
                 capture_source = ScreenSource(self.monitor)
             with capture_source as source:
                 frame = source.grab()
+                log.debug("First source frame received")
                 self.encoder = Encoder(video, getattr(source, "width", self.monitor["width"]), getattr(source, "height", self.monitor["height"]), self.fps,
                                        self.settings.file_format, self.settings.quality,
                                        overlay=self.settings.overlay if self.settings.overlay_enabled else None)
@@ -75,7 +79,10 @@ class RecordingWorker(QThread):
                     while frames < target and not self.stop_event.is_set():
                         self.encoder.write(frame)
                         frames += 1
+                        if frames % (self.fps * 5) == 0:
+                            log.trace("Capture progress: frames=%s",frames)
         except Exception as exc:
+            log.exception("Capture worker failed")
             error = str(exc)
         finally:
             self.stop_event.set()
@@ -99,6 +106,7 @@ class RecordingWorker(QThread):
                 parts.rmdir()
             except Exception as exc:
                 error = str(exc)
+        log.debug("Capture worker finished: frames=%s failed=%s",frames,bool(error))
         if reservation:
             try:
                 reservation.rmdir()

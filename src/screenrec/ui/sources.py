@@ -5,6 +5,8 @@ from datetime import datetime
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 from .region_selector import RegionSelector
+from screenrec.logger.logger import get_logger
+log = get_logger(__name__)
 
 
 class SourceController:
@@ -31,6 +33,7 @@ class SourceController:
 
     def source_changed(self, *_, save=True):
         mode = self.window.source_mode.currentData()
+        log.info("Recording source selected: %s",mode)
         self.settings.source_mode = mode
         self.window.monitors.setVisible(mode in ("monitor","region"))
         self.window.window_list.setVisible(mode == "window")
@@ -81,6 +84,7 @@ class SourceController:
             dialog = RegionSelector(screen, monitor, self.settings.region)
             if dialog.exec():
                 self.settings.region = dialog.selected_region()
+                log.debug("Recording region selected: %s",self.settings.region)
                 self.window.region_info.setText(self.region_description())
                 self.save_settings()
                 self.set_busy(False)
