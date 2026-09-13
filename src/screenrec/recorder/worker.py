@@ -49,9 +49,14 @@ class RecordingWorker(QThread):
                 video = parts / f"video.{self.settings.file_format}"
                 audio = AudioSession(self.settings, parts)
                 audio.prepare()
-            with ScreenSource(self.monitor) as source:
+            if self.monitor.get('kind') == 'window':
+                from .window import source as window_source
+                capture_source = window_source(self.monitor)
+            else:
+                capture_source = ScreenSource(self.monitor)
+            with capture_source as source:
                 frame = source.grab()
-                self.encoder = Encoder(video, self.monitor["width"], self.monitor["height"], self.fps,
+                self.encoder = Encoder(video, getattr(source, "width", self.monitor["width"]), getattr(source, "height", self.monitor["height"]), self.fps,
                                        self.settings.file_format, self.settings.quality)
                 start = time.monotonic()
                 if audio:

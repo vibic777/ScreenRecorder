@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "ScreenRec — запись вкладки",
+  "version": "0.3.0",
+  "minimum_chrome_version": "116",
+  "description": "Локальная передача выбранной вкладки в ScreenRec. Без облака.",
+  "permissions": [
+    "tabCapture",
+    "offscreen",
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

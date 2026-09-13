@@ -39,5 +39,6 @@ PyInstaller.__main__.run([
     "--icon", str(icon_path), "--paths", str(root / "src"),
     "--specpath", str(root / "build"), "--collect-data", "screenrec",
     "--collect-all", "imageio_ffmpeg", "--collect-all", audio_package,
+    *(["--collect-all", "windows_capture"] if platform.system() == "Windows" else []),
     *runtime_options, *excludes, str(root / "scripts/launcher.py"),
 ])

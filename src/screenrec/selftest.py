@@ -26,23 +26,36 @@ def run(arguments):
     parser.add_argument("--audio", choices=["none", "microphone", "system", "both"], default="none")
     parser.add_argument("--format", choices=["mp4", "mkv", "webm"], default="mp4")
     parser.add_argument("--synthetic", action="store_true")
+    parser.add_argument("--window-fixture", action="store_true")
     args = parser.parse_args(arguments)
     directory = Path(args.output).resolve()
     directory.mkdir(parents=True, exist_ok=True)
     report = directory / f"selftest-{args.format}-{args.audio}.json"
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    os.environ["QT_QPA_PLATFORM"] = "windows" if args.window_fixture else "offscreen"
     worker = None
     try:
-        from PySide6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication, QWidget
         from imageio_ffmpeg import get_ffmpeg_exe, count_frames_and_secs
         from .app import ScreenRecApp
         from .config.settings import Settings
         from .recorder.worker import RecordingWorker
         from .recorder.screen import monitors, ScreenSource
         app = QApplication([])
+        extension = Path(__file__).parent / "browser_extension"
+        for name in ("manifest.json", "background.js", "offscreen.js", "popup.html"):
+            assert (extension / name).is_file(), f"Missing extension resource: {name}"
         settings = Settings(output_dir=str(directory), fps=15, file_format=args.format,
                             audio_mode=args.audio, notifications=False)
         monitor = {"left": 0, "top": 0, "width": 320, "height": 180} if args.synthetic else monitors()[0]
+        if args.window_fixture:
+            fixture = QWidget()
+            fixture.setWindowTitle("ScreenRec native capture diagnostic")
+            fixture.setStyleSheet("background: #20b060")
+            fixture.resize(480, 320)
+            fixture.show()
+            app.processEvents()
+            monitor = {"kind": "window", "hwnd": int(fixture.winId()), "pid": os.getpid(),
+                       "title": fixture.windowTitle(), "left": 0, "top": 0, "width": 480, "height": 320}
         with patch("screenrec.app.Settings.load", return_value=settings), patch("screenrec.app.monitors", return_value=[monitor]):
             controller = ScreenRecApp(app)
             assert not controller.icon.isNull(), "Missing application icon"

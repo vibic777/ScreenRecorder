@@ -29,7 +29,8 @@ class ScreenSource:
         return self
 
     def grab(self):
-        return self.capture.grab(self.monitor).bgra
+        region = {key: self.monitor[key] for key in ("left", "top", "width", "height")}
+        return self.capture.grab(region).bgra
 
     def __exit__(self, *_):
         self.capture.close()
