@@ -44,7 +44,7 @@ def main():
     env = dict(os.environ)
     env.pop("PYTHONPATH", None)
     env.pop("IMAGEIO_FFMPEG_EXE", None)
-    env["PATH"] = os.pathsep.join([str(Path(env["SystemRoot"]) / "System32"), env["SystemRoot"]])
+    env["PATH"] = os.pathsep.join([str(Path(os.environ["SystemRoot"]) / "System32"), os.environ["SystemRoot"]])
     diagnostic = root / ".test-output" / f"release-{version}"
     run(str(pending / "ScreenRec.exe"), "--self-test", "--output", str(diagnostic), "--synthetic",
         cwd=pending, env=env, timeout=90, creationflags=subprocess.CREATE_NO_WINDOW)
