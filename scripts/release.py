@@ -51,8 +51,19 @@ def main():
     report = json.loads((diagnostic / "selftest-mp4-none.json").read_text(encoding="utf-8"))
     if not report.get("ok"):
         raise RuntimeError("Standalone test failed")
+    window_diagnostic = diagnostic / "window"
+    run(str(pending / "ScreenRec.exe"), "--self-test", "--window-fixture", "--output", str(window_diagnostic),
+        cwd=pending, env=env, timeout=90, creationflags=subprocess.CREATE_NO_WINDOW)
+    window_report = json.loads((window_diagnostic / "selftest-mp4-none.json").read_text(encoding="utf-8"))
+    if not window_report.get("ok"):
+        raise RuntimeError("Standalone window test failed")
     for name in ("README.md", "AGENT.md", "CHANGELOG.md", "RELEASE.md"):
         shutil.copy2(root / name, pending / name)
+    extension_source = root / "src/screenrec/browser_extension"
+    with zipfile.ZipFile(pending / f"ScreenRec-{version}-browser-extension.zip", "w", compression=zipfile.ZIP_DEFLATED) as extension_archive:
+        for path in sorted(extension_source.iterdir()):
+            if path.is_file():
+                extension_archive.write(path, arcname=path.name)
     from packaging.requirements import Requirement
     todo = (root / "requirements.txt").read_text().splitlines()
     deps = {}
@@ -73,9 +84,13 @@ def main():
     with zipfile.ZipFile(pending / f"ScreenRec-{version}-windows-x64.zip", "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for name in ("ScreenRec.exe", "README.md", "AGENT.md", "CHANGELOG.md", "RELEASE.md", "requirements-windows-lock.txt"):
             archive.write(pending / name, arcname=name)
+        for path in sorted(extension_source.iterdir()):
+            if path.is_file():
+                archive.write(path, arcname=f"browser-extension/{path.name}")
     run(*git, "archive", "--format=zip", f"--output={pending / f'ScreenRec-{version}-source.zip'}", commit)
     manifest = {"version": version, "commit": commit, "built_at_utc": datetime.now(timezone.utc).isoformat(),
                 "platform": platform.platform(), "python": platform.python_version(), "pyinstaller": metadata.version("pyinstaller"),
+                "window_capture_test": {key: window_report[key] for key in ("ok", "frames", "seconds", "audio")},
                 "standalone_test": {key: report[key] for key in ("ok", "frames", "seconds", "audio")}}
     (pending / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     hashes = []

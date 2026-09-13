@@ -1,5 +1,5 @@
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from platformdirs import user_config_path, user_videos_path
@@ -18,6 +18,8 @@ class Settings:
     microphone_id: str = ""
     system_device_id: str = ""
     audio_bitrate: int = 192
+    source_mode: str = "monitor"
+    region: dict = field(default_factory=dict)
 
     @staticmethod
     def path() -> Path:
@@ -39,6 +41,8 @@ class Settings:
                                           ("audio_mode", AUDIO_MODES, "none")):
                 if getattr(settings, key) not in choices:
                     setattr(settings, key, default)
+            if settings.source_mode not in ("monitor", "region", "window", "tab"):
+                settings.source_mode = "monitor"
             if settings.audio_bitrate not in (96, 128, 192, 256, 320):
                 settings.audio_bitrate = 192
             return settings

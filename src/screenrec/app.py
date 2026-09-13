@@ -13,9 +13,10 @@ from .ui.main_window import MainWindow
 from .ui.tray_menu import create_tray
 from .ui.settings_dialog import SettingsDialog
 from .config.recording import FORMATS, QUALITIES, AUDIO_MODES
+from .ui.sources import SourceController
 
 
-class ScreenRecApp(QObject):
+class ScreenRecApp(SourceController, QObject):
     def __init__(self, application):
         super().__init__(application)
         self.application = application
@@ -59,7 +60,7 @@ class ScreenRecApp(QObject):
         self.window.stop.clicked.connect(self.stop_recording)
         self.window.browse.clicked.connect(self.choose_folder)
         self.window.open_folder.clicked.connect(self.open_folder)
-        self.window.refresh.clicked.connect(self.refresh_monitors)
+        self.window.refresh.clicked.connect(self.refresh_sources)
         self.window.close_requested.connect(self.close_window)
         self.window.close_to_tray.toggled.connect(self.set_close_to_tray)
         self.window.fps.currentTextChanged.connect(self.set_fps)
@@ -69,6 +70,7 @@ class ScreenRecApp(QObject):
         application.aboutToQuit.connect(self.cleanup)
         self.refresh_monitors()
         self.update_summary()
+        self.initialize_sources()
 
     def update_summary(self):
         self.window.recording_summary.setText(f"{FORMATS[self.settings.file_format]} • "
@@ -119,13 +121,13 @@ class ScreenRecApp(QObject):
         self.set_busy(False)
 
     def set_busy(self, busy):
-        can_start = not busy and self.window.monitors.count() > 0
+        can_start = not busy and bool(self.current_source())
         self.window.start.setEnabled(can_start)
         self.start_action.setEnabled(can_start)
         self.window.stop.setEnabled(busy)
         self.stop_action.setEnabled(busy)
         self.configure_action.setEnabled(not busy)
-        for widget in (self.window.monitors, self.window.refresh, self.window.fps, self.window.browse, self.window.configure):
+        for widget in (self.window.monitors, self.window.refresh, self.window.fps, self.window.browse, self.window.configure, self.window.source_mode, self.window.window_list, self.window.select_region, self.window.export_extension):
             widget.setEnabled(not busy)
 
     def choose_folder(self):
@@ -147,11 +149,18 @@ class ScreenRecApp(QObject):
     def start_recording(self):
         if self.worker or self.exiting:
             return
-        monitor = self.window.monitors.currentData()
+        monitor = self.current_source()
         if not monitor:
             return
-        self.worker = RecordingWorker(monitor, self.settings.output_dir, self.settings.fps, self,
-                                      settings=replace(self.settings))
+        if monitor.get("kind") == "tab":
+            from .recorder.browser_tab import BrowserWorker
+            self.window.pairing.clear()
+            self.worker = BrowserWorker(replace(self.settings), self)
+            self.worker.pairing_ready.connect(self.show_pairing)
+            self.worker.tab_selected.connect(lambda title: self.window.pairing.setToolTip("Записывается: " + title))
+        else:
+            self.worker = RecordingWorker(monitor, self.settings.output_dir, self.settings.fps, self,
+                                          settings=replace(self.settings))
         self.worker.recording_started.connect(self.recording_started)
         self.worker.recording_saved.connect(self.recording_saved)
         self.worker.failed.connect(self.error)
@@ -198,6 +207,7 @@ class ScreenRecApp(QObject):
         self.worker.wait()
         self.worker.deleteLater()
         self.worker = None
+        self.window.pairing.clear()
         self.started_at = None
         self.stop_deadline = None
         self.tray.setToolTip("ScreenRec — готов к записи")

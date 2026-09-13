@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "screenrec"
-version = "0.2.0"
+version = "0.3.0"
 description = "Desktop screen recorder"
 requires-python = ">=3.11"
 dynamic = ["dependencies"]
@@ -16,4 +16,4 @@ dependencies = {file = ["requirements.txt"]}
 where = ["src"]
 
 [tool.setuptools.package-data]
-screenrec = ["assets/icons/*.svg", "assets/icons/*.ico", "assets/icons/*.png", "ui/themes/*.qss"]
+screenrec = ["assets/icons/*.svg", "assets/icons/*.ico", "assets/icons/*.png", "ui/themes/*.qss", "browser_extension/*"]
