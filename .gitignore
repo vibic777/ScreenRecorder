@@ -1,11 +1,73 @@
+# Virtual environments
 .venv/
+venv/
+.env/
+.env.*/
+
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
 *.egg-info/
+.eggs/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+*.pyo
+
+# Build / packaging
 build/
 dist/
-*.log
+*.spec
+
+# Local releases and pending builds (publish via GitHub Releases)
+releases/
+*.pending/
+
+# Tests, smoke runs, Playwright browsers/profiles
 .test-output/
 
-releases/
-
+# Runtime logs and temp recording sidecars
+*.log
 *.log.[123]
+screenrec.log*
+.ScreenRec_*.parts/
+*.recording/
+
+# Accidental media / binaries in the working tree
+*.mp4
+*.mkv
+*.webm
+*.wav
+*.avi
+*.exe
+*.zip
+
+# Secrets and local machine config (never commit)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets.*
+settings.json
+templates.json
+theme-settings.json
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
