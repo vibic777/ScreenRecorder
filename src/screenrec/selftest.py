@@ -1,0 +1,96 @@
+"""Explicit standalone-build diagnostic; never runs on normal launch."""
+import argparse
+import json
+import os
+import subprocess
+import time
+import traceback
+from pathlib import Path
+from unittest.mock import patch
+
+
+class TestSource:
+    def __init__(self, monitor):
+        self.frame = bytes([40, 100, 180, 255]) * monitor["width"] * monitor["height"]
+    def __enter__(self):
+        return self
+    def grab(self):
+        return self.frame
+    def __exit__(self, *_):
+        pass
+
+
+def run(arguments):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--audio", choices=["none", "microphone", "system", "both"], default="none")
+    parser.add_argument("--format", choices=["mp4", "mkv", "webm"], default="mp4")
+    parser.add_argument("--synthetic", action="store_true")
+    args = parser.parse_args(arguments)
+    directory = Path(args.output).resolve()
+    directory.mkdir(parents=True, exist_ok=True)
+    report = directory / f"selftest-{args.format}-{args.audio}.json"
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    worker = None
+    try:
+        from PySide6.QtWidgets import QApplication
+        from imageio_ffmpeg import get_ffmpeg_exe, count_frames_and_secs
+        from .app import ScreenRecApp
+        from .config.settings import Settings
+        from .recorder.worker import RecordingWorker
+        from .recorder.screen import monitors, ScreenSource
+        app = QApplication([])
+        settings = Settings(output_dir=str(directory), fps=15, file_format=args.format,
+                            audio_mode=args.audio, notifications=False)
+        monitor = {"left": 0, "top": 0, "width": 320, "height": 180} if args.synthetic else monitors()[0]
+        with patch("screenrec.app.Settings.load", return_value=settings), patch("screenrec.app.monitors", return_value=[monitor]):
+            controller = ScreenRecApp(app)
+            assert not controller.icon.isNull(), "Missing application icon"
+            from .ui.settings_dialog import SettingsDialog
+            dialog = SettingsDialog(settings, controller.window)
+            assert dialog.result_settings() == settings
+            dialog.deleteLater()
+            controller.timer.stop()
+            controller.cleanup()
+        errors, saved, started = [], [], []
+        worker = RecordingWorker(monitor, directory, 15, settings=settings)
+        worker.failed.connect(errors.append)
+        worker.recording_saved.connect(saved.append)
+        worker.recording_started.connect(lambda _: started.append(time.monotonic()))
+        with patch("screenrec.recorder.worker.ScreenSource", TestSource if args.synthetic else ScreenSource):
+            worker.start()
+            deadline = time.monotonic() + 60
+            while worker.isRunning() and time.monotonic() < deadline:
+                app.processEvents()
+                if started and time.monotonic() - started[0] >= 2:
+                    worker.stop()
+                time.sleep(0.01)
+            if worker.isRunning():
+                raise RuntimeError("Self-test timed out")
+            app.processEvents()
+        if errors:
+            raise RuntimeError("\n".join(errors))
+        if not saved:
+            raise RuntimeError("No recording returned")
+        video = saved[0]
+        count, duration = count_frames_and_secs(video)
+        decoded = subprocess.run([get_ffmpeg_exe(), "-v", "error", "-i", video, "-f", "null", "-"],
+                                 capture_output=True, timeout=30, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        assert decoded.returncode == 0, decoded.stderr.decode(errors="replace")
+        probe = subprocess.run([get_ffmpeg_exe(), "-i", video], capture_output=True,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        info = probe.stderr.decode(errors="replace")
+        assert ("Audio:" in info) == (args.audio != "none"), info
+        report.write_text(json.dumps({"ok": True, "file": video, "frames": count, "seconds": duration,
+                                     "audio": args.audio, "ffmpeg": get_ffmpeg_exe(), "streams": info}, ensure_ascii=False, indent=2), encoding="utf-8")
+        return 0
+    except Exception:
+        report.write_text(json.dumps({"ok": False, "error": traceback.format_exc()}, ensure_ascii=False, indent=2), encoding="utf-8")
+        return 1
+    finally:
+        if worker and worker.isRunning():
+            worker.stop()
+            encoder = worker.encoder
+            if encoder:
+                encoder.abort()
+            worker.wait()

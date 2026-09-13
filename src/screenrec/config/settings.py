@@ -1,0 +1,53 @@
+import json
+from dataclasses import asdict, dataclass
+from pathlib import Path
+
+from platformdirs import user_config_path, user_videos_path
+from .recording import FORMATS, QUALITIES, AUDIO_MODES
+
+
+@dataclass
+class Settings:
+    output_dir: str = str(user_videos_path() / "ScreenRec")
+    fps: int = 30
+    close_to_tray: bool = True
+    notifications: bool = True
+    file_format: str = "mp4"
+    quality: str = "balanced"
+    audio_mode: str = "none"
+    microphone_id: str = ""
+    system_device_id: str = ""
+    audio_bitrate: int = 192
+
+    @staticmethod
+    def path() -> Path:
+        return user_config_path("ScreenRec", appauthor=False) / "settings.json"
+
+    @classmethod
+    def load(cls):
+        try:
+            data = json.loads(cls.path().read_text(encoding="utf-8"))
+            settings = cls()
+            for key, default in asdict(settings).items():
+                value = data.get(key, default)
+                if type(value) is type(default):
+                    setattr(settings, key, value)
+            if settings.fps not in (15, 24, 30, 60):
+                settings.fps = 30
+            for key, choices, default in (("file_format", FORMATS, "mp4"),
+                                          ("quality", QUALITIES, "balanced"),
+                                          ("audio_mode", AUDIO_MODES, "none")):
+                if getattr(settings, key) not in choices:
+                    setattr(settings, key, default)
+            if settings.audio_bitrate not in (96, 128, 192, 256, 320):
+                settings.audio_bitrate = 192
+            return settings
+        except (OSError, ValueError, AttributeError):
+            return cls()
+
+    def save(self):
+        path = self.path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_suffix(".tmp")
+        temporary.write_text(json.dumps(asdict(self), ensure_ascii=False, indent=2), encoding="utf-8")
+        temporary.replace(path)

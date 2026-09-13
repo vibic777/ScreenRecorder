@@ -1,0 +1,10 @@
+@echo off
+cd /d "%~dp0.."
+if not exist .venv\Scripts\python.exe (
+  echo Run scripts\setup_venv_windows.bat first.
+  exit /b 1
+)
+call .venv\Scripts\activate.bat
+python scripts\build.py
+if errorlevel 1 exit /b 1
+echo Build finished: dist\ScreenRec.exe
