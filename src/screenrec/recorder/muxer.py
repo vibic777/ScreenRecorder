@@ -1,10 +1,13 @@
 import subprocess
 from imageio_ffmpeg import get_ffmpeg_exe
 from screenrec.config.recording import container_options
+from screenrec.logger.logger import get_logger
+log = get_logger(__name__)
 
 
 def mux_audio(video, tracks, output, settings, duration):
     """Copy encoded video; align, mix and encode only audio, preserving video duration."""
+    log.debug("Muxing audio: tracks=%s duration=%.3f",len(tracks),duration)
     command = [get_ffmpeg_exe(), "-hide_banner", "-loglevel", "error", "-n", "-i", str(video)]
     filters = []
     for index, (path, offset) in enumerate(tracks, 1):

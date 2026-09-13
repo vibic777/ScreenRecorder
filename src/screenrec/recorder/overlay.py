@@ -3,6 +3,8 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QRectF
 from PySide6.QtGui import QImage, QImageReader, QPainter, QColor, QFont
 from screenrec.config.templates import validate
+from screenrec.logger.logger import get_logger
+log = get_logger(__name__)
 
 def enabled(template):
     return any(layer["enabled"] for layer in validate(template).values())
@@ -58,8 +60,13 @@ def render(template, width, height, image=None):
 def prepare(template, width, height, destination, image=None):
     if not enabled(template):
         return None
-    if not render(template,width,height,image).save(str(destination),"PNG"):
-        raise RuntimeError("Не удалось сохранить слой наложения.")
+    log.debug("Preparing overlay layer: width=%s height=%s",width,height)
+    try:
+        if not render(template,width,height,image).save(str(destination),"PNG"):
+            raise RuntimeError("Не удалось сохранить слой наложения.")
+    except Exception:
+        log.exception("Overlay preparation failed")
+        raise
     return destination
 
 def ffmpeg_options(options, overlay):

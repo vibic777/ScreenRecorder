@@ -15,6 +15,8 @@ from imageio_ffmpeg import get_ffmpeg_exe
 from screenrec.config.recording import video_options
 from .audio import AudioSession
 from .muxer import mux_audio
+from screenrec.logger.logger import get_logger
+log = get_logger(__name__)
 
 
 class TabSession:
@@ -175,6 +177,7 @@ class BrowserWorker(QThread):
             self.session.stop_requested = True
 
     def run(self):
+        log.info("Browser capture session starting")
         session, audio, parts = None, None, None
         error = None
         reservation = None
@@ -198,6 +201,7 @@ class BrowserWorker(QThread):
                 audio.prepare()
             session = self.session = TabSession(raw, self.settings)
             session.ready = True
+            log.debug("Loopback bridge ready; awaiting browser")
             self.pairing_ready.emit(session.pairing_code)
             deadline = time.monotonic() + 300
             while not session.started.wait(0.05):
@@ -209,6 +213,7 @@ class BrowserWorker(QThread):
                     raise RuntimeError("Вкладка не подключена за 5 минут. Начните сеанс заново.")
             if audio:
                 audio.start(session.origin)
+            log.info("Browser connected; tab capture active")
             self.tab_selected.emit(session.title)
             self.recording_started.emit(str(output))
             stop_deadline = None
@@ -234,6 +239,7 @@ class BrowserWorker(QThread):
             session = self.session = None
             if raw.stat().st_size == 0:
                 raise RuntimeError("Браузер не передал видео.")
+            log.debug("Browser transfer complete; encoding received video")
             video = parts / f"video.{self.settings.file_format}" if tracks else output
             from .overlay import prepare, ffmpeg_options
             overlay_path = None
@@ -265,6 +271,7 @@ class BrowserWorker(QThread):
             parts.rmdir()
             self.recording_saved.emit(str(output))
         except Exception as exc:
+            log.exception("Browser capture failed")
             error = str(exc)
         finally:
             self.stop_event.set()

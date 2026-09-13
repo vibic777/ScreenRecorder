@@ -15,6 +15,8 @@ from .ui.settings_dialog import SettingsDialog
 from .config.recording import FORMATS, QUALITIES, AUDIO_MODES
 from .ui.sources import SourceController
 from .ui.themes.theme_manager import THEMES, apply_theme
+from .logger.logger import get_logger, configure as configure_log, hub, shutdown as close_log
+log = get_logger(__name__)
 
 
 class ScreenRecApp(SourceController, QObject):
@@ -22,6 +24,8 @@ class ScreenRecApp(SourceController, QObject):
         super().__init__(application)
         self.application = application
         self.settings = Settings.load()
+        log_warning = self.apply_logging()
+        log.info("Application started")
         self.worker = None
         self.exiting = False
         self.started_at = None
@@ -45,6 +49,8 @@ class ScreenRecApp(SourceController, QObject):
         menu.addSeparator()
         menu.addAction(self.exit_action)
         settings_menu = self.window.menuBar().addMenu("Настройки")
+        self.logging_action = settings_menu.addAction("Логирование…")
+        self.logging_action.triggered.connect(self.configure_logging)
         self.configure_action = settings_menu.addAction("Конфигуратор записи…")
         self.configure_action.triggered.connect(self.configure_recording)
         self.window.configure.clicked.connect(self.configure_recording)
@@ -91,6 +97,27 @@ class ScreenRecApp(SourceController, QObject):
         self.refresh_monitors()
         self.update_summary()
         self.initialize_sources()
+        if log_warning:
+            QTimer.singleShot(0, lambda: QMessageBox.warning(self.window,"Логирование",log_warning))
+
+    def apply_logging(self):
+        path, warning = configure_log(self.settings.logging_enabled,self.settings.log_path,self.settings.log_levels)
+        if self.settings.logging_enabled and path is None:
+            self.settings.logging_enabled = False
+        elif path is not None and warning:
+            self.settings.log_path = str(path)
+        return warning
+
+    def configure_logging(self):
+        from .ui.logging_dialog import LoggingDialog
+        dialog = LoggingDialog(self.settings,self.window)
+        if dialog.exec():
+            self.settings = dialog.result_settings()
+            warning = self.apply_logging()
+            self.save_settings()
+            log.info("Logging configuration applied")
+            if warning:
+                QMessageBox.warning(self.window,"Логирование",warning)
 
     def configure_filename(self):
         if self.worker:
@@ -149,6 +176,7 @@ class ScreenRecApp(SourceController, QObject):
     def save_settings(self):
         try:
             self.settings.save()
+            log.debug("Settings saved")
         except OSError as exc:
             self.error(f"Не удалось сохранить настройки: {exc}")
 
@@ -210,6 +238,7 @@ class ScreenRecApp(SourceController, QObject):
             self.error(str(exc))
 
     def start_recording(self):
+        log.debug("Start recording requested")
         if self.worker or self.exiting:
             return
         monitor = self.current_source()
@@ -234,16 +263,23 @@ class ScreenRecApp(SourceController, QObject):
         self.worker.start()
 
     def finalizing(self):
+        log.info("Finalizing recording")
         self.window.status.setText("Сохранение записи и обработка звука…")
         self.window.stop.setEnabled(False)
         self.stop_action.setEnabled(False)
 
     def recording_started(self, path):
+        log.info("Recording started: %s",path)
         self.started_at = time.monotonic()
         self.tray.setToolTip("ScreenRec — идёт запись")
         self.notify("Запись начата", path)
 
     def tick(self):
+        problem = hub.take_problem()
+        if problem:
+            self.settings.logging_enabled = False
+            self.save_settings()
+            QMessageBox.warning(self.window,"Логирование",problem)
         if self.stop_deadline and time.monotonic() > self.stop_deadline:
             encoder = self.worker.encoder if self.worker else None
             if encoder:
@@ -254,6 +290,7 @@ class ScreenRecApp(SourceController, QObject):
             self.window.status.setText(f"● Запись  {elapsed // 3600:02}:{elapsed // 60 % 60:02}:{elapsed % 60:02}")
 
     def stop_recording(self):
+        log.info("Stop recording requested")
         if self.worker:
             self.worker.stop()
             if self.stop_deadline is None:
@@ -263,6 +300,7 @@ class ScreenRecApp(SourceController, QObject):
             self.window.status.setText("Завершение записи…")
 
     def recording_saved(self, path):
+        log.info("Recording saved: %s",path)
         self.window.status.setText(f"Сохранено: {path}")
         self.notify("Запись сохранена", path)
 
@@ -283,6 +321,7 @@ class ScreenRecApp(SourceController, QObject):
             self.tray.showMessage(title, text)
 
     def error(self, message):
+        log.error("Application error: %s",message)
         self.window.status.setText(f"Ошибка: {message}")
         self.notify("Ошибка ScreenRec", message)
         if not self.exiting:
@@ -299,6 +338,7 @@ class ScreenRecApp(SourceController, QObject):
             self.show_window()
 
     def close_window(self):
+        log.debug("Window close requested; close_to_tray=%s",self.settings.close_to_tray)
         if self.settings.close_to_tray and QSystemTrayIcon.isSystemTrayAvailable():
             self.tray.show()
             self.window.hide()
@@ -316,6 +356,7 @@ class ScreenRecApp(SourceController, QObject):
                 QMessageBox.StandardButton.No)
             if answer != QMessageBox.StandardButton.Yes:
                 return
+        log.info("Application exit requested")
         self.exiting = True
         self.start_action.setEnabled(False)
         if self.worker:
@@ -332,3 +373,5 @@ class ScreenRecApp(SourceController, QObject):
                     encoder.abort()
                 self.worker.wait()
         self.tray.hide()
+        log.info("Application cleanup complete")
+        close_log()

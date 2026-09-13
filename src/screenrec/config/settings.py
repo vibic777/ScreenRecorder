@@ -19,6 +19,9 @@ class Settings:
     microphone_id: str = ""
     system_device_id: str = ""
     audio_bitrate: int = 192
+    logging_enabled: bool = False
+    log_path: str = ""
+    log_levels: list = field(default_factory=lambda: ["INFO","WARNING","ERROR","CRITICAL","FATAL"])
     filename_prefix: str = "ScreenRec"
     filename_date: bool = True
     filename_time: bool = True
@@ -58,6 +61,8 @@ class Settings:
                 settings.source_mode = "monitor"
             if settings.audio_bitrate not in (96, 128, 192, 256, 320):
                 settings.audio_bitrate = 192
+            from screenrec.logger.logger import LEVELS
+            settings.log_levels = list(dict.fromkeys(item for item in settings.log_levels if isinstance(item,str) and item in LEVELS))
             from .filenames import DATE_FORMATS, TIME_FORMATS, clean_prefix
             settings.filename_prefix = clean_prefix(settings.filename_prefix)
             if settings.filename_date_format not in DATE_FORMATS:
