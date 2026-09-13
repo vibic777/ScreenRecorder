@@ -56,6 +56,10 @@ def run(arguments):
         settings.overlay["image"].update(enabled=True,path=str(logo_path),x=.25,y=.25,w=.5,h=.5)
         settings.overlay["text"].update(enabled=True,text="ScreenRec overlay",size=.06)
         settings.overlay_enabled = True
+        settings.filename_prefix = "Custom"
+        settings.filename_date = False
+        settings.filename_time = False
+        settings.filename_uuid = False
         monitor = {"left": 0, "top": 0, "width": 320, "height": 180} if args.synthetic else monitors()[0]
         if args.window_fixture:
             fixture = QWidget()
@@ -86,6 +90,11 @@ def run(arguments):
             editor = OverlayEditor(settings,controller.window)
             editor.grab().save(str(directory / "overlay-editor.png"))
             editor.deleteLater()
+            from .ui.filename_dialog import FilenameDialog
+            naming = FilenameDialog(settings,controller.window)
+            assert naming.preview.text() == "Custom." + args.format
+            naming.grab().save(str(directory / "filename-editor.png"))
+            naming.deleteLater()
             from .ui.settings_dialog import SettingsDialog
             dialog = SettingsDialog(settings, controller.window)
             assert dialog.result_settings() == settings
@@ -113,6 +122,7 @@ def run(arguments):
         if not saved:
             raise RuntimeError("No recording returned")
         video = saved[0]
+        assert Path(video).stem == "Custom" or Path(video).stem.startswith("Custom_"), video
         count, duration = count_frames_and_secs(video)
         from imageio_ffmpeg import read_frames
         import numpy as np

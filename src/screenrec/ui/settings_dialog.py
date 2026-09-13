@@ -26,6 +26,9 @@ class SettingsDialog(QDialog):
         form.addRow("Микрофон", self.microphone)
         form.addRow("Источник системного звука", self.system_device)
         form.addRow("Качество звука", self.bitrate)
+        filename_button = QPushButton("Имя файла…")
+        filename_button.clicked.connect(self.configure_filename)
+        form.addRow(filename_button)
         self.refresh = QPushButton("Обновить аудиоустройства")
         form.addRow(self.refresh)
         self.message = QLabel()
@@ -45,6 +48,12 @@ class SettingsDialog(QDialog):
         self.audio_mode.currentIndexChanged.connect(self.update_audio)
         self.fill_devices([], settings.microphone_id, settings.system_device_id)
         self.update_audio()
+
+    def configure_filename(self):
+        from .filename_dialog import FilenameDialog
+        dialog = FilenameDialog(replace(self.settings, file_format=self.file_format.currentData()), self)
+        if dialog.exec():
+            self.settings = dialog.result_settings()
 
     @staticmethod
     def combo(options, value):

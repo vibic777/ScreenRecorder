@@ -19,6 +19,12 @@ class Settings:
     microphone_id: str = ""
     system_device_id: str = ""
     audio_bitrate: int = 192
+    filename_prefix: str = "ScreenRec"
+    filename_date: bool = True
+    filename_time: bool = True
+    filename_uuid: bool = True
+    filename_date_format: str = "ymd"
+    filename_time_format: str = "24h"
     overlay_enabled: bool = False
     overlay_name: str = ""
     overlay: dict = field(default_factory=default_template)
@@ -52,6 +58,12 @@ class Settings:
                 settings.source_mode = "monitor"
             if settings.audio_bitrate not in (96, 128, 192, 256, 320):
                 settings.audio_bitrate = 192
+            from .filenames import DATE_FORMATS, TIME_FORMATS, clean_prefix
+            settings.filename_prefix = clean_prefix(settings.filename_prefix)
+            if settings.filename_date_format not in DATE_FORMATS:
+                settings.filename_date_format = "ymd"
+            if settings.filename_time_format not in TIME_FORMATS:
+                settings.filename_time_format = "24h"
             from .templates import validate
             settings.overlay = validate(settings.overlay)
             return settings

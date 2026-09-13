@@ -67,6 +67,8 @@ class MainWindow(QMainWindow):
         layout.addLayout(row)
         self.configure = QPushButton("Конфигуратор записи…")
         layout.addWidget(self.configure)
+        self.filename_button = QPushButton("Имя файла…")
+        layout.addWidget(self.filename_button)
         self.overlay_button = QPushButton("Картинка и текст…")
         self.overlay_enabled = QCheckBox("Накладывать картинку / текст")
         self.overlay_enabled.setChecked(settings.overlay_enabled)

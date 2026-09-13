@@ -75,7 +75,7 @@ class SourceTests(unittest.TestCase):
             logo.save(str(logo_path))
             overlay = default_template()
             overlay["image"].update(enabled=True,path=str(logo_path),x=.25,y=.25,w=.5,h=.5)
-            worker = BrowserWorker(Settings(output_dir=directory, audio_mode="none",overlay_enabled=True,overlay=overlay))
+            worker = BrowserWorker(Settings(output_dir=directory, audio_mode="none",overlay_enabled=True,overlay=overlay,filename_prefix="TabTest",filename_date=False,filename_time=False,filename_uuid=False))
             errors,saved = [],[]
             worker.failed.connect(errors.append)
             worker.recording_saved.connect(saved.append)
@@ -97,6 +97,7 @@ class SourceTests(unittest.TestCase):
                 self.assertFalse(worker.isRunning())
                 self.assertEqual(errors,[])
                 self.assertEqual(len(saved),1)
+                self.assertEqual(Path(saved[0]).name,"TabTest.mp4")
                 self.assertGreater(Path(saved[0]).stat().st_size,100)
                 from imageio_ffmpeg import read_frames
                 import numpy as np
