@@ -1,0 +1,1 @@
+"""ScreenRec desktop recorder."""
