@@ -19,6 +19,13 @@ import PySide6
 
 root = Path(__file__).resolve().parents[1]
 os.chdir(root)
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("--output-dir", default="dist")
+args = parser.parse_args()
+output_dir = (root / args.output_dir).resolve()
+if not output_dir.is_relative_to(root):
+    raise SystemExit("Build output must be inside the project")
 app = QApplication([])
 icon_path = root / "build" / "screenrec.ico"
 icon_path.parent.mkdir(exist_ok=True)
@@ -36,7 +43,7 @@ if platform.system() == "Windows":
         runtime_options += ["--add-binary", f"{qt_directory / name}{os.pathsep}."]
 PyInstaller.__main__.run([
     "--noconfirm", "--clean", "--onefile", "--windowed", "--name", "ScreenRec", "--noupx",
-    "--icon", str(icon_path), "--paths", str(root / "src"),
+    "--distpath", str(output_dir), "--icon", str(icon_path), "--paths", str(root / "src"),
     "--specpath", str(root / "build"), "--collect-data", "screenrec",
     "--collect-all", "imageio_ffmpeg", "--collect-all", audio_package,
     *(["--collect-all", "windows_capture"] if platform.system() == "Windows" else []),
