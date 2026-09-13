@@ -67,7 +67,15 @@ class SourceTests(unittest.TestCase):
             for _ in range(15):
                 encoder.write(bytes([20,80,140,255])*64*48)
             encoder.finish()
-            worker = BrowserWorker(Settings(output_dir=directory, audio_mode="none"))
+            from PySide6.QtGui import QImage, QColor
+            from screenrec.config.templates import default_template
+            logo = QImage(32,24,QImage.Format.Format_ARGB32)
+            logo.fill(QColor("red"))
+            logo_path = Path(directory)/"logo.png"
+            logo.save(str(logo_path))
+            overlay = default_template()
+            overlay["image"].update(enabled=True,path=str(logo_path),x=.25,y=.25,w=.5,h=.5)
+            worker = BrowserWorker(Settings(output_dir=directory, audio_mode="none",overlay_enabled=True,overlay=overlay))
             errors,saved = [],[]
             worker.failed.connect(errors.append)
             worker.recording_saved.connect(saved.append)
@@ -90,6 +98,16 @@ class SourceTests(unittest.TestCase):
                 self.assertEqual(errors,[])
                 self.assertEqual(len(saved),1)
                 self.assertGreater(Path(saved[0]).stat().st_size,100)
+                from imageio_ffmpeg import read_frames
+                import numpy as np
+                reader=read_frames(saved[0],pix_fmt="rgb24")
+                try:
+                    next(reader)
+                    pixel=np.frombuffer(next(reader),np.uint8).reshape(48,64,3)[24,32]
+                    self.assertGreater(int(pixel[0]),220)
+                    self.assertLess(int(pixel[1]),30)
+                finally:
+                    reader.close()
                 self.assertFalse(list(Path(directory).glob(".*.parts")))
             finally:
                 worker.stop()

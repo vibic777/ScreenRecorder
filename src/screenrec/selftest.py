@@ -46,6 +46,16 @@ def run(arguments):
             assert (extension / name).is_file(), f"Missing extension resource: {name}"
         settings = Settings(output_dir=str(directory), fps=15, file_format=args.format,
                             audio_mode=args.audio, notifications=False)
+        from PySide6.QtGui import QImage, QColor
+        from .config.templates import default_template
+        logo = QImage(40,30,QImage.Format.Format_ARGB32)
+        logo.fill(QColor("red"))
+        logo_path = directory / "overlay-logo.png"
+        assert logo.save(str(logo_path))
+        settings.overlay = default_template()
+        settings.overlay["image"].update(enabled=True,path=str(logo_path),x=.25,y=.25,w=.5,h=.5)
+        settings.overlay["text"].update(enabled=True,text="ScreenRec overlay",size=.06)
+        settings.overlay_enabled = True
         monitor = {"left": 0, "top": 0, "width": 320, "height": 180} if args.synthetic else monitors()[0]
         if args.window_fixture:
             fixture = QWidget()
@@ -72,6 +82,10 @@ def run(arguments):
                 controller.window.resize(820, 660)
                 controller.window.grab().save(str(directory / f"theme-{name}.png"))
             controller.set_theme("blue", save=False)
+            from .ui.overlay_editor import OverlayEditor
+            editor = OverlayEditor(settings,controller.window)
+            editor.grab().save(str(directory / "overlay-editor.png"))
+            editor.deleteLater()
             from .ui.settings_dialog import SettingsDialog
             dialog = SettingsDialog(settings, controller.window)
             assert dialog.result_settings() == settings
@@ -100,6 +114,16 @@ def run(arguments):
             raise RuntimeError("No recording returned")
         video = saved[0]
         count, duration = count_frames_and_secs(video)
+        from imageio_ffmpeg import read_frames
+        import numpy as np
+        reader=read_frames(video,pix_fmt="rgb24")
+        try:
+            metadata=next(reader)
+            w,h=metadata["size"]
+            pixel=np.frombuffer(next(reader),np.uint8).reshape(h,w,3)[h//2,w//2]
+            assert int(pixel[0])>220 and int(pixel[1])<35, f"Overlay absent: {pixel}"
+        finally:
+            reader.close()
         decoded = subprocess.run([get_ffmpeg_exe(), "-v", "error", "-i", video, "-f", "null", "-"],
                                  capture_output=True, timeout=30, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         assert decoded.returncode == 0, decoded.stderr.decode(errors="replace")
@@ -108,7 +132,7 @@ def run(arguments):
         info = probe.stderr.decode(errors="replace")
         assert ("Audio:" in info) == (args.audio != "none"), info
         report.write_text(json.dumps({"ok": True, "file": video, "frames": count, "seconds": duration,
-                                     "audio": args.audio, "ffmpeg": get_ffmpeg_exe(), "streams": info}, ensure_ascii=False, indent=2), encoding="utf-8")
+                                     "audio": args.audio, "overlays": True, "ffmpeg": get_ffmpeg_exe(), "streams": info}, ensure_ascii=False, indent=2), encoding="utf-8")
         return 0
     except Exception:
         report.write_text(json.dumps({"ok": False, "error": traceback.format_exc()}, ensure_ascii=False, indent=2), encoding="utf-8")

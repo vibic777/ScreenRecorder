@@ -10,9 +10,20 @@ from screenrec.config.recording import video_options
 class Encoder:
     """Write BGRA frames, finalize on EOF, keep diagnostics out of pipe buffers."""
 
-    def __init__(self, path: Path, width: int, height: int, fps: int, file_format="mp4", quality="balanced"):
+    def __init__(self, path: Path, width: int, height: int, fps: int, file_format="mp4", quality="balanced", overlay=None):
         if path.exists():
             raise FileExistsError(f"Файл уже существует: {path}")
+        self.overlay_directory = None
+        from .overlay import enabled, prepare, ffmpeg_options
+        overlay_path = None
+        if enabled(overlay):
+            self.overlay_directory = tempfile.TemporaryDirectory(prefix="screenrec-overlay-")
+            try:
+                overlay_path = prepare(overlay, width, height, Path(self.overlay_directory.name) / "overlay.png")
+            except BaseException:
+                self.overlay_directory.cleanup()
+                raise
+        inputs, options = ffmpeg_options(video_options(file_format, quality, fps), overlay_path)
         self.errors = tempfile.TemporaryFile()
         self.process = None
         self.timed_out = False
@@ -20,13 +31,15 @@ class Encoder:
             self.process = subprocess.Popen(
                 [get_ffmpeg_exe(), "-hide_banner", "-loglevel", "error", "-n",
                  "-f", "rawvideo", "-pixel_format", "bgra", "-video_size", f"{width}x{height}",
-                 "-framerate", str(fps), "-i", "pipe:0", "-an"]
-                + video_options(file_format, quality, fps) + [str(path)],
+                 "-framerate", str(fps), "-i", "pipe:0"]
+                + inputs + ["-an"] + options + [str(path)],
                 stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=self.errors,
                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             )
         except BaseException:
             self.errors.close()
+            if self.overlay_directory:
+                self.overlay_directory.cleanup()
             raise
 
     def write(self, frame):
@@ -57,3 +70,5 @@ class Encoder:
                 self.process.kill()
                 self.process.wait()
             self.errors.close()
+            if self.overlay_directory:
+                self.overlay_directory.cleanup()

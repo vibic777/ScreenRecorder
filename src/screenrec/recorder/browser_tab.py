@@ -187,6 +187,12 @@ class BrowserWorker(QThread):
             parts = directory / f".{stem}.parts"
             parts.mkdir()
             raw = parts / "tab.webm"
+            from .overlay import load_image
+            from screenrec.config.templates import validate
+            overlay_template = validate(self.settings.overlay) if self.settings.overlay_enabled else {}
+            overlay_image = None
+            if overlay_template and overlay_template["image"]["enabled"]:
+                overlay_image = load_image(overlay_template["image"]["path"])
             if self.settings.audio_mode != "none":
                 audio = AudioSession(self.settings, parts)
                 audio.prepare()
@@ -229,9 +235,20 @@ class BrowserWorker(QThread):
             if raw.stat().st_size == 0:
                 raise RuntimeError("Браузер не передал видео.")
             video = parts / f"video.{self.settings.file_format}" if tracks else output
+            from .overlay import prepare, ffmpeg_options
+            overlay_path = None
+            if self.settings.overlay_enabled:
+                from imageio_ffmpeg import read_frames
+                reader = read_frames(str(raw))
+                try:
+                    size = next(reader)["size"]
+                finally:
+                    reader.close()
+                overlay_path = prepare(overlay_template, *size, parts / "overlay.png", overlay_image)
+            inputs, options = ffmpeg_options(video_options(self.settings.file_format, self.settings.quality, self.settings.fps), overlay_path)
             command = [get_ffmpeg_exe(), "-hide_banner", "-loglevel", "error", "-n", "-i", str(raw),
-                       "-an", "-r", str(self.settings.fps)]
-            command += video_options(self.settings.file_format, self.settings.quality, self.settings.fps) + [str(video)]
+                       ] + inputs + ["-an", "-r", str(self.settings.fps)]
+            command += options + [str(video)]
             result = subprocess.run(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
                                     timeout=max(120, duration * 10), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
             if result.returncode:
@@ -243,6 +260,8 @@ class BrowserWorker(QThread):
                 mux_audio(video, tracks, output, self.settings, video_duration)
             for path in [raw, *(track[0] for track in tracks), *([video] if tracks else [])]:
                 path.unlink()
+            if overlay_path:
+                overlay_path.unlink()
             parts.rmdir()
             self.recording_saved.emit(str(output))
         except Exception as exc:

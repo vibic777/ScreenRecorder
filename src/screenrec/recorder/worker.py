@@ -57,7 +57,8 @@ class RecordingWorker(QThread):
             with capture_source as source:
                 frame = source.grab()
                 self.encoder = Encoder(video, getattr(source, "width", self.monitor["width"]), getattr(source, "height", self.monitor["height"]), self.fps,
-                                       self.settings.file_format, self.settings.quality)
+                                       self.settings.file_format, self.settings.quality,
+                                       overlay=self.settings.overlay if self.settings.overlay_enabled else None)
                 start = time.monotonic()
                 if audio:
                     audio.start(start)
