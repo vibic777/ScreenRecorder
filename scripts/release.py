@@ -90,8 +90,8 @@ def main():
     run(*git, "archive", "--format=zip", f"--output={pending / f'ScreenRec-{version}-source.zip'}", commit)
     manifest = {"version": version, "commit": commit, "built_at_utc": datetime.now(timezone.utc).isoformat(),
                 "platform": platform.platform(), "python": platform.python_version(), "pyinstaller": metadata.version("pyinstaller"),
-                "window_capture_test": {key: window_report[key] for key in ("ok", "frames", "seconds", "audio", "overlays", "logging")},
-                "standalone_test": {key: report[key] for key in ("ok", "frames", "seconds", "audio", "overlays", "logging")}}
+                "window_capture_test": {key: window_report[key] for key in ("ok", "frames", "seconds", "audio", "overlays", "logging", "player")},
+                "standalone_test": {key: report[key] for key in ("ok", "frames", "seconds", "audio", "overlays", "logging", "player")}}
     (pending / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     hashes = []
     for path in sorted(pending.iterdir()):

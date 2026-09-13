@@ -156,6 +156,40 @@ def run(arguments):
                                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         info = probe.stderr.decode(errors="replace")
         assert ("Audio:" in info) == (args.audio != "none"), info
+        from .ui.recordings_view import RecordingsView
+        from PySide6.QtMultimedia import QMediaPlayer
+        viewer = RecordingsView(directory)
+        try:
+            viewer.resize(1000,650)
+            viewer.show()
+            viewer.refresh(select=video)
+            deadline = time.monotonic()+15
+            while viewer.frame_image is None and time.monotonic()<deadline:
+                app.processEvents()
+                time.sleep(.01)
+            assert viewer.frame_image is not None, viewer.player.errorString()
+            assert viewer.player.error() == QMediaPlayer.Error.NoError
+            assert viewer.player.duration() > 0
+            viewer.frame_image.save(str(directory / "player-frame.png"))
+            viewer.grab().save(str(directory / "player.png"))
+            viewer.set_muted(True)
+            viewer.toggle_play()
+            deadline = time.monotonic()+5
+            while viewer.player.position()<200 and time.monotonic()<deadline:
+                app.processEvents()
+                time.sleep(.01)
+            assert viewer.player.position() >= 200
+            viewer.toggle_play()
+            viewer.player.setPosition(500)
+            viewer.toggle_fullscreen()
+            app.processEvents()
+            viewer.leave_fullscreen()
+            viewer.stop_playback()
+            assert viewer.player.position() == 0
+        finally:
+            viewer.shutdown()
+            viewer.close()
+            app.processEvents()
         configure_log(False)
         log_text = log_path.read_text(encoding="utf-8")
         for name in LEVELS:
@@ -165,7 +199,7 @@ def run(arguments):
         diagnostic_log.fatal_error("DISABLED_SENTINEL")
         assert log_path.read_bytes() == before
         report.write_text(json.dumps({"ok": True, "file": video, "frames": count, "seconds": duration,
-                                     "audio": args.audio, "overlays": True, "logging": True, "ffmpeg": get_ffmpeg_exe(), "streams": info}, ensure_ascii=False, indent=2), encoding="utf-8")
+                                     "audio": args.audio, "overlays": True, "logging": True, "player": True, "ffmpeg": get_ffmpeg_exe(), "streams": info}, ensure_ascii=False, indent=2), encoding="utf-8")
         return 0
     except Exception:
         report.write_text(json.dumps({"ok": False, "error": traceback.format_exc()}, ensure_ascii=False, indent=2), encoding="utf-8")

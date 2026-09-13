@@ -1,6 +1,6 @@
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                              QLabel, QComboBox, QPushButton, QLineEdit, QCheckBox)
+                              QLabel, QComboBox, QPushButton, QLineEdit, QCheckBox, QTabWidget, QScrollArea)
 
 
 class MainWindow(QMainWindow):
@@ -12,7 +12,12 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(icon)
         self.resize(740, 460)
         body = QWidget()
-        self.setCentralWidget(body)
+        self.tabs = QTabWidget()
+        self.setCentralWidget(self.tabs)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(body)
+        self.tabs.addTab(scroll,"Запись")
         layout = QVBoxLayout(body)
         title = QLabel("Запись экрана")
         title.setStyleSheet("font-size: 24px; font-weight: bold")
@@ -93,6 +98,11 @@ class MainWindow(QMainWindow):
         row.addWidget(self.open_folder)
         layout.addLayout(row)
         layout.addWidget(QLabel("Монитор • область • окно • вкладка"))
+
+        from .recordings_view import RecordingsView
+        self.recordings = RecordingsView(settings.output_dir)
+        self.tabs.addTab(self.recordings,"Записи")
+        self.tabs.currentChanged.connect(lambda index: self.recordings.activate() if index == 1 else self.recordings.stop_playback())
 
     def closeEvent(self, event):
         event.ignore()
