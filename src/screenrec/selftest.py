@@ -59,6 +59,19 @@ def run(arguments):
         with patch("screenrec.app.Settings.load", return_value=settings), patch("screenrec.app.monitors", return_value=[monitor]):
             controller = ScreenRecApp(app)
             assert not controller.icon.isNull(), "Missing application icon"
+            from .ui.themes.theme_manager import THEMES
+            from PySide6.QtGui import QIcon
+            for name, theme in THEMES.items():
+                with patch.object(Settings, "path", return_value=directory / "theme-settings.json"):
+                    controller.theme_actions[name].trigger()
+                assert json.loads((directory / "theme-settings.json").read_text(encoding="utf-8"))["theme"] == name
+                assert controller.theme_actions[name].isChecked()
+                assert controller.window.windowIcon().pixmap(32, 32).toImage() == QIcon(str(theme["window_icon_path"])).pixmap(32, 32).toImage()
+                assert controller.tray.icon().pixmap(32, 32).toImage() == QIcon(str(theme["tray_icon_path"])).pixmap(32, 32).toImage()
+                assert app.styleSheet() == theme["qss_path"].read_text(encoding="utf-8")
+                controller.window.resize(820, 660)
+                controller.window.grab().save(str(directory / f"theme-{name}.png"))
+            controller.set_theme("blue", save=False)
             from .ui.settings_dialog import SettingsDialog
             dialog = SettingsDialog(settings, controller.window)
             assert dialog.result_settings() == settings

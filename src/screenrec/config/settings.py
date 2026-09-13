@@ -18,6 +18,7 @@ class Settings:
     microphone_id: str = ""
     system_device_id: str = ""
     audio_bitrate: int = 192
+    theme: str = "blue"
     source_mode: str = "monitor"
     region: dict = field(default_factory=dict)
 
@@ -41,6 +42,8 @@ class Settings:
                                           ("audio_mode", AUDIO_MODES, "none")):
                 if getattr(settings, key) not in choices:
                     setattr(settings, key, default)
+            if settings.theme not in ("green", "blue", "gray", "black"):
+                settings.theme = "blue"
             if settings.source_mode not in ("monitor", "region", "window", "tab"):
                 settings.source_mode = "monitor"
             if settings.audio_bitrate not in (96, 128, 192, 256, 320):

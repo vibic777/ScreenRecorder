@@ -17,7 +17,7 @@ class MainWindow(QMainWindow):
         title = QLabel("Запись экрана")
         title.setStyleSheet("font-size: 24px; font-weight: bold")
         layout.addWidget(title)
-        layout.addWidget(QLabel("Выберите монитор и папку для сохранения записи."))
+        layout.addWidget(QLabel("Выберите источник и папку для сохранения записи."))
         self.source_mode = QComboBox()
         for key, label in (("monitor","Монитор"), ("region","Область экрана"), ("window","Окно программы"), ("tab","Вкладка браузера")):
             self.source_mode.addItem(label, key)
@@ -85,7 +85,7 @@ class MainWindow(QMainWindow):
         row.addWidget(self.stop)
         row.addWidget(self.open_folder)
         layout.addLayout(row)
-        layout.addWidget(QLabel("Запись монитора • Windows / Linux X11"))
+        layout.addWidget(QLabel("Монитор • область • окно • вкладка"))
 
     def closeEvent(self, event):
         event.ignore()

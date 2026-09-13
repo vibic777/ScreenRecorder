@@ -3,7 +3,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QTimer, QUrl
-from PySide6.QtGui import QAction, QDesktopServices, QIcon
+from PySide6.QtGui import QActionGroup, QAction, QDesktopServices, QIcon
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QSystemTrayIcon
 
 from .config.settings import Settings
@@ -14,6 +14,7 @@ from .ui.tray_menu import create_tray
 from .ui.settings_dialog import SettingsDialog
 from .config.recording import FORMATS, QUALITIES, AUDIO_MODES
 from .ui.sources import SourceController
+from .ui.themes.theme_manager import THEMES, apply_theme
 
 
 class ScreenRecApp(SourceController, QObject):
@@ -53,6 +54,18 @@ class ScreenRecApp(SourceController, QObject):
         notifications.toggled.connect(self.set_notifications)
         self.tray, self.tray_menu = create_tray(self.window, self.icon, self.start_action,
                                                self.stop_action, self.show_action, self.exit_action)
+        self.theme_menu = settings_menu.addMenu("Тема")
+        self.theme_group = QActionGroup(self)
+        self.theme_group.setExclusive(True)
+        self.theme_actions = {}
+        for key, theme in THEMES.items():
+            action = self.theme_menu.addAction(QIcon(str(theme["window_icon_path"])), theme["label"])
+            action.setCheckable(True)
+            action.setData(key)
+            self.theme_group.addAction(action)
+            self.theme_actions[key] = action
+        self.theme_group.triggered.connect(lambda action: self.set_theme(action.data()))
+        self.set_theme(self.settings.theme, save=False)
         self.tray.activated.connect(self.tray_activated)
         if QSystemTrayIcon.isSystemTrayAvailable():
             self.tray.show()
@@ -71,6 +84,14 @@ class ScreenRecApp(SourceController, QObject):
         self.refresh_monitors()
         self.update_summary()
         self.initialize_sources()
+
+    def set_theme(self, name, *, save=True):
+        name = name if name in THEMES else "blue"
+        self.icon = apply_theme(self.application, self.window, self.tray, name)
+        self.settings.theme = name
+        self.theme_actions[name].setChecked(True)
+        if save:
+            self.save_settings()
 
     def update_summary(self):
         self.window.recording_summary.setText(f"{FORMATS[self.settings.file_format]} • "
