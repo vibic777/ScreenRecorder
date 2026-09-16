@@ -32,6 +32,7 @@ class Settings:
     overlay_name: str = ""
     overlay: dict = field(default_factory=default_template)
     theme: str = "blue"
+    language: str = "en"
     source_mode: str = "monitor"
     region: dict = field(default_factory=dict)
 
@@ -55,6 +56,8 @@ class Settings:
                                           ("audio_mode", AUDIO_MODES, "none")):
                 if getattr(settings, key) not in choices:
                     setattr(settings, key, default)
+            if settings.language not in ("en", "ru"):
+                settings.language = "en"
             if settings.theme not in ("green", "blue", "gray", "black"):
                 settings.theme = "blue"
             if settings.source_mode not in ("monitor", "region", "window", "tab"):

@@ -16,4 +16,4 @@ dependencies = {file = ["requirements.txt"]}
 where = ["src"]
 
 [tool.setuptools.package-data]
-screenrec = ["assets/icons/*.svg", "assets/icons/*.ico", "assets/icons/*.png", "ui/themes/*.qss", "browser_extension/*"]
+screenrec = ["assets/icons/*.svg", "assets/icons/*.ico", "assets/icons/*.png", "ui/themes/*.qss", "browser_extension/*", "locales/*.json"]
