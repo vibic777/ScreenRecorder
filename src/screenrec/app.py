@@ -7,7 +7,7 @@ from PySide6.QtGui import QActionGroup, QAction, QDesktopServices, QIcon
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QSystemTrayIcon
 
 from .config.settings import Settings
-from .config.profiles import save_profile
+from .config.profiles import save_profile, load_profile
 from .localization import Translator, SUPPORTED_LANGUAGES
 from .recorder.screen import monitors
 from .recorder.worker import RecordingWorker
@@ -64,6 +64,8 @@ class ScreenRecApp(SourceController, QObject):
         profiles_menu = settings_menu.addMenu(self.translator.tr("profiles.menu"))
         export_profile_action = profiles_menu.addAction(self.translator.tr("profiles.export"))
         export_profile_action.triggered.connect(self.export_profile)
+        import_profile_action = profiles_menu.addAction(self.translator.tr("profiles.import"))
+        import_profile_action.triggered.connect(self.import_profile)
 
         self.logging_action = settings_menu.addAction(self.translator.tr("settings.logging"))
         self.logging_action.triggered.connect(self.configure_logging)
@@ -151,6 +153,32 @@ class ScreenRecApp(SourceController, QObject):
         elif path is not None and warning:
             self.settings.log_path = str(path)
         return warning
+
+    def import_profile(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self.window, self.translator.tr("profiles.import_title"),
+            "", self.translator.tr("profiles.file_filter"),
+        )
+        if not path:
+            return
+        previous_language = self.settings.language
+        loaded = load_profile(Path(path))
+        self.settings = loaded
+        self.save_settings()
+        self.set_theme(self.settings.theme, save=False)
+        self.window.fps.blockSignals(True)
+        self.window.fps.setCurrentText(str(self.settings.fps))
+        self.window.fps.blockSignals(False)
+        self.window.close_to_tray.setChecked(self.settings.close_to_tray)
+        self.window.overlay_enabled.setChecked(self.settings.overlay_enabled)
+        self.update_summary()
+        self.apply_logging()
+        if previous_language != self.settings.language:
+            QMessageBox.information(self.window, self.translator.tr("profiles.import_title"),
+                                    self.translator.tr("language.restart_required"))
+        else:
+            QMessageBox.information(self.window, self.translator.tr("profiles.import_title"),
+                                    self.translator.tr("profiles.imported", path=path))
 
     def export_profile(self):
         path, _ = QFileDialog.getSaveFileName(
