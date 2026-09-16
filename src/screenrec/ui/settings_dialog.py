@@ -20,7 +20,7 @@ class SettingsDialog(QDialog):
         self.audio_mode = self.combo(AUDIO_MODES, settings.audio_mode)
         self.microphone = QComboBox()
         self.system_device = QComboBox()
-        self.bitrate = self.combo({i: f"{i} кбит/с" for i in (96, 128, 192, 256, 320)}, settings.audio_bitrate)
+        self.bitrate = self.combo({i: self.t("settings.bitrate").format(value=i) for i in (96, 128, 192, 256, 320)}, settings.audio_bitrate)
         form.addRow(self.t("settings.format"), self.file_format)
         form.addRow(self.t("settings.video_quality"), self.quality)
         form.addRow(self.t("settings.fps"), self.fps)
@@ -82,7 +82,7 @@ class SettingsDialog(QDialog):
                 if is_loopback == loopback:
                     box.addItem(name, device_id)
             if selected and box.findData(selected) < 0:
-                box.addItem(f"Сохранённое устройство (обновите список): {selected}", selected)
+                box.addItem(self.t("settings.saved_device").format(id=selected), selected)
             box.setCurrentIndex(max(0, box.findData(selected)))
 
     def refresh_devices(self):
@@ -91,7 +91,7 @@ class SettingsDialog(QDialog):
             self.fill_devices(items, self.microphone.currentData(), self.system_device.currentData())
             self.message.setText(self.t("settings.devices_updated") if items else self.t("settings.devices_none"))
         except Exception as exc:
-            self.message.setText(f"Не удалось получить аудиоустройства: {exc}")
+            self.message.setText(self.t("settings.devices_error").format(error=exc))
 
     def update_audio(self):
         mode = self.audio_mode.currentData()

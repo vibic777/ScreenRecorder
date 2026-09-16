@@ -77,8 +77,8 @@ class FilenameDialog(QDialog):
         self.time_format.setEnabled(self.time.isChecked())
         self.preview.setText(filename(self.result_settings(),self.moment,"12345678-1234-4123-8123-123456789abc"))
         safe=clean_prefix(self.prefix.text())
-        self.note.setText("Недопустимые символы заменены; префикс: " + (safe or "(пусто)") if safe!=self.prefix.text() else
-                         ("UUID в примере условный; при каждой записи создаётся новый." if self.uuid.isChecked() else "UUID отключён; совпадения имён разрешаются числовым суффиксом."))
+        self.note.setText(self.t("filename.note_sanitized").format(prefix=safe or self.t("filename.empty")) if safe!=self.prefix.text() else
+                         (self.t("filename.note_uuid_example") if self.uuid.isChecked() else self.t("filename.note_uuid_disabled")))
     def defaults(self):
         self.prefix.setText("ScreenRec")
         for box in (self.date,self.time,self.uuid):

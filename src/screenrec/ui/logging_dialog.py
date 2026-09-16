@@ -42,10 +42,7 @@ class LoggingDialog(QDialog):
             row.addWidget(box)
             self.levels[name]=box
         layout.addLayout(row)
-        note=QLabel("По умолчанию логгер выключен. Настройки применяются сразу после сохранения.\n"
-                    "Ротация: 5 МБ на файл, три резервные копии (.1–.3).\n"
-                    "Без выбранных уровней события не записываются. FATAL не обходит выключенные галочки.\n"
-                    "Токены подключения, содержимое вкладок и текст наложений в лог не выводятся.")
+        note=QLabel(self.t("logging.note"))
         note.setWordWrap(True)
         layout.addWidget(note)
         buttons=QDialogButtonBox(QDialogButtonBox.StandardButton.Save|QDialogButtonBox.StandardButton.Cancel)
@@ -62,7 +59,7 @@ class LoggingDialog(QDialog):
         return self.translator.tr(key)
 
     def browse(self):
-        path,_=QFileDialog.getSaveFileName(self,self.t("logging.file_title"),self.path.text(),"Логи (*.log);;Все файлы (*)")
+        path,_=QFileDialog.getSaveFileName(self,self.t("logging.file_title"),self.path.text(),self.t("logging.file_filter"))
         if path:
             self.path.setText(path)
     def open(self,directory):

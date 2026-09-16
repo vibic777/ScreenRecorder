@@ -370,7 +370,7 @@ class RecordingsView(QWidget):
         answer=QMessageBox.question(
             self,
             self.t("player.delete"),
-            f"Удалить запись «{path.name}»?\n\nФайл будет удалён без возможности восстановления.",
+            self.t("player.delete_confirm").format(name=path.name),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )

@@ -9,10 +9,10 @@ THEMES = {
           "window_icon_path": ROOT.parents[1] / "assets" / "icons" / f"icon_{key}.svg",
           "background": background, "foreground": foreground, "accent": accent}
     for key, label, background, foreground, accent in (
-        ("green", "Зелёная", "#edf6f0", "#172d22", "#237a49"),
-        ("blue", "Синяя", "#eef4fc", "#182c46", "#2469b0"),
-        ("gray", "Серая", "#eceef1", "#242830", "#555e6c"),
-        ("black", "Чёрная", "#15171b", "#f0f2f6", "#7c99bc"),
+        ("green", "Green", "#edf6f0", "#172d22", "#237a49"),
+        ("blue", "Blue", "#eef4fc", "#182c46", "#2469b0"),
+        ("gray", "Gray", "#eceef1", "#242830", "#555e6c"),
+        ("black", "Black", "#15171b", "#f0f2f6", "#7c99bc"),
     )
 }
 
