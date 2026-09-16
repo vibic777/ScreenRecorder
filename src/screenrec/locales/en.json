@@ -212,5 +212,9 @@
   "folder.recordings": "Recordings folder",
   "source.monitor_item": "Monitor {index}: {width} × {height} ({left}, {top})",
   "status.tab_recording": "Recording tab:",
-  "status.saved": "Saved: {path}"
+  "status.saved": "Saved: {path}",
+  "filename.invalid_prefix": "Invalid characters were replaced; prefix: {prefix}",
+  "filename.collision_suffix": "UUID is disabled; duplicate names receive a numeric suffix.",
+  "filename.empty": "(empty)",
+  "filename.uuid_example": "The UUID in this preview is illustrative; a new one is generated for each recording."
 }
