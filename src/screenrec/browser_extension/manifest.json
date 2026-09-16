@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "default_locale": "en",
-  "name": "ScreenRec — запись вкладки",
+  "name": "__MSG_extensionName__",
   "version": "0.3.0",
   "minimum_chrome_version": "116",
-  "description": "Локальная передача выбранной вкладки в ScreenRec. Без облака.",
+  "description": "__MSG_extensionDescription__",
   "permissions": [
     "tabCapture",
     "offscreen",
