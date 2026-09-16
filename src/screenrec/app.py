@@ -1,4 +1,5 @@
 import time
+import json
 from dataclasses import replace
 from pathlib import Path
 
@@ -161,8 +162,19 @@ class ScreenRecApp(SourceController, QObject):
         )
         if not path:
             return
+        answer = QMessageBox.question(self.window, self.translator.tr("profiles.import_title"),
+                                      self.translator.tr("profiles.import_confirm", path=path),
+                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                      QMessageBox.StandardButton.No)
+        if answer != QMessageBox.StandardButton.Yes:
+            return
         previous_language = self.settings.language
-        loaded = load_profile(Path(path))
+        try:
+            loaded = load_profile(Path(path), fallback=False)
+        except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+            QMessageBox.warning(self.window, self.translator.tr("profiles.error_title"),
+                                self.translator.tr("profiles.import_error", error=exc))
+            return
         self.settings = loaded
         self.save_settings()
         self.set_theme(self.settings.theme, save=False)

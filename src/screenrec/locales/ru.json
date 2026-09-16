@@ -59,6 +59,8 @@
   "overlay.text": "Текст",
   "overlay.frame_height": " % высоты кадра",
   "common.cancel": "Отмена",
+  "profiles.import_confirm": "Загрузить настройки из этого файла?\\n{path}",
+  "profiles.import_error": "Не удалось загрузить профиль: {error}",
   "profiles.imported": "Профиль загружен: {path}",
   "profiles.import_title": "Импорт профиля настроек",
   "profiles.import": "Импортировать профиль…",
