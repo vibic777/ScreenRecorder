@@ -3,13 +3,15 @@ from PySide6.QtWidgets import (QDialog, QFormLayout, QComboBox, QDialogButtonBox
                               QLabel, QPushButton)
 from screenrec.config.recording import FORMATS, QUALITIES, AUDIO_MODES
 from screenrec.recorder.audio import devices
+from screenrec.localization import Translator
 
 
 class SettingsDialog(QDialog):
     def __init__(self, settings, parent=None):
         super().__init__(parent)
         self.settings = settings
-        self.setWindowTitle("Конфигуратор записи")
+        self.translator = Translator(settings.language)
+        self.setWindowTitle(self.t("settings.dialog.title"))
         self.setMinimumWidth(510)
         form = QFormLayout(self)
         self.file_format = self.combo(FORMATS, settings.file_format)
@@ -19,28 +21,27 @@ class SettingsDialog(QDialog):
         self.microphone = QComboBox()
         self.system_device = QComboBox()
         self.bitrate = self.combo({i: f"{i} кбит/с" for i in (96, 128, 192, 256, 320)}, settings.audio_bitrate)
-        form.addRow("Формат файла", self.file_format)
-        form.addRow("Качество видео", self.quality)
-        form.addRow("Кадров в секунду", self.fps)
-        form.addRow("Запись звука", self.audio_mode)
-        form.addRow("Микрофон", self.microphone)
-        form.addRow("Источник системного звука", self.system_device)
-        form.addRow("Качество звука", self.bitrate)
-        filename_button = QPushButton("Имя файла…")
+        form.addRow(self.t("settings.format"), self.file_format)
+        form.addRow(self.t("settings.video_quality"), self.quality)
+        form.addRow(self.t("settings.fps"), self.fps)
+        form.addRow(self.t("settings.audio"), self.audio_mode)
+        form.addRow(self.t("settings.microphone"), self.microphone)
+        form.addRow(self.t("settings.system_audio"), self.system_device)
+        form.addRow(self.t("settings.audio_quality"), self.bitrate)
+        filename_button = QPushButton(self.t("settings.filename"))
         filename_button.clicked.connect(self.configure_filename)
         form.addRow(filename_button)
-        self.refresh = QPushButton("Обновить аудиоустройства")
+        self.refresh = QPushButton(self.t("settings.refresh_audio"))
         form.addRow(self.refresh)
         self.message = QLabel()
         self.message.setWordWrap(True)
         form.addRow(self.message)
-        note = QLabel("Высокое качество увеличивает размер файла. WebM может сильнее нагружать процессор.\n"
-                      "Настройки применяются к следующей записи. Без звука — аудиоустройства не используются.")
+        note = QLabel(self.t("settings.note_quality") + "\\n" + self.t("settings.note_audio"))
         note.setWordWrap(True)
         form.addRow(note)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
-        buttons.button(QDialogButtonBox.StandardButton.Save).setText("Сохранить")
-        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Отмена")
+        buttons.button(QDialogButtonBox.StandardButton.Save).setText(self.t("common.save"))
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText(self.t("common.cancel"))
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         form.addRow(buttons)
@@ -48,6 +49,9 @@ class SettingsDialog(QDialog):
         self.audio_mode.currentIndexChanged.connect(self.update_audio)
         self.fill_devices([], settings.microphone_id, settings.system_device_id)
         self.update_audio()
+
+    def t(self,key):
+        return self.translator.tr(key)
 
     def configure_filename(self):
         from .filename_dialog import FilenameDialog
@@ -66,7 +70,7 @@ class SettingsDialog(QDialog):
     def fill_devices(self, items, mic_id, system_id):
         for box, selected, loopback in ((self.microphone, mic_id, False), (self.system_device, system_id, True)):
             box.clear()
-            box.addItem("Устройство по умолчанию", "")
+            box.addItem(self.t("settings.default_device"), "")
             for device_id, name, is_loopback in items:
                 if is_loopback == loopback:
                     box.addItem(name, device_id)
@@ -78,7 +82,7 @@ class SettingsDialog(QDialog):
         try:
             items = devices()
             self.fill_devices(items, self.microphone.currentData(), self.system_device.currentData())
-            self.message.setText("Список устройств обновлён." if items else "Аудиоустройства не найдены.")
+            self.message.setText(self.t("settings.devices_updated") if items else self.t("settings.devices_none"))
         except Exception as exc:
             self.message.setText(f"Не удалось получить аудиоустройства: {exc}")
 
