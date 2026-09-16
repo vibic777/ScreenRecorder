@@ -59,6 +59,8 @@
   "overlay.text": "Text",
   "overlay.frame_height": " % of frame height",
   "common.cancel": "Cancel",
+  "profiles.import_confirm": "Import settings from this file?\\n{path}",
+  "profiles.import_error": "Could not import the profile: {error}",
   "profiles.imported": "Profile imported from: {path}",
   "profiles.import_title": "Import settings profile",
   "profiles.import": "Import profile…",

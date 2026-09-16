@@ -30,7 +30,7 @@ def save_profile(path: Path, settings: Settings) -> None:
     path.write_text(json.dumps(export_data(settings), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def load_profile(path: Path) -> Settings:
+def load_profile(path: Path, *, fallback=True) -> Settings:
     """Load a profile defensively; malformed or unsafe values use defaults."""
     try:
         document = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -42,6 +42,8 @@ def load_profile(path: Path) -> Settings:
         if not isinstance(data, dict):
             raise ValueError("invalid profile settings")
     except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        if not fallback:
+            raise
         return Settings()
 
     defaults = Settings()
