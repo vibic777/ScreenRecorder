@@ -14,6 +14,7 @@ from .ui.main_window import MainWindow
 from .ui.tray_menu import create_tray
 from .ui.settings_dialog import SettingsDialog
 from .config.recording import FORMATS, QUALITIES, AUDIO_MODES
+from .config.commands import COMMANDS
 from .ui.sources import SourceController
 from .ui.themes.theme_manager import THEMES, apply_theme
 from .logger.logger import get_logger, configure as configure_log, hub, shutdown as close_log
@@ -41,6 +42,10 @@ class ScreenRecApp(SourceController, QObject):
         self.stop_action.setEnabled(False)
         self.show_action = QAction(self.translator.tr("window.show"), self)
         self.exit_action = QAction(self.translator.tr("action.exit"), self)
+        self.start_action.setShortcut(COMMANDS["start_recording"].shortcut)
+        self.stop_action.setShortcut(COMMANDS["stop_recording"].shortcut)
+        self.show_action.setShortcut(COMMANDS["show_window"].shortcut)
+        self.exit_action.setShortcut(COMMANDS["exit"].shortcut)
         self.start_action.triggered.connect(self.start_recording)
         self.stop_action.triggered.connect(self.stop_recording)
         self.show_action.triggered.connect(self.show_window)
