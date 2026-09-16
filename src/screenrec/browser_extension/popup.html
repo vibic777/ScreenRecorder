@@ -1,8 +1,15 @@
-<!doctype html><html lang="ru"><meta charset="utf-8"><title>ScreenRec</title>
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>ScreenRec</title>
 <style>body{font:14px system-ui;width:330px;padding:12px;color:#142331}input,button{box-sizing:border-box;width:100%;margin:6px 0;padding:9px}p{line-height:1.4}#status{white-space:pre-wrap}</style>
-<h2>Записать эту вкладку</h2>
-<p>В ScreenRec выберите «Вкладка браузера», нажмите «Начать запись» и скопируйте код подключения.</p>
-<label>Код подключения<input id="code" placeholder="порт:код" autocomplete="off"></label>
-<button id="start">Подключить и записывать эту вкладку</button>
-<button id="stop">Остановить запись вкладки</button>
-<p id="status"></p><script src="popup.js"></script></html>
+</head>
+<body>
+<h2 id="title"></h2>
+<p id="hint"></p>
+<label><span id="code-label"></span><input id="code" autocomplete="off"></label>
+<button id="start"></button>
+<button id="stop"></button>
+<p id="status"></p>
+<script src="popup.js"></script>
+</body>
+</html>
