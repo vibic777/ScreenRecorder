@@ -14,7 +14,7 @@ from .ui.main_window import MainWindow
 from .ui.tray_menu import create_tray
 from .ui.settings_dialog import SettingsDialog
 from .config.recording import FORMATS, QUALITIES, AUDIO_MODES
-from .config.commands import COMMANDS
+from .config.commands import COMMANDS, commands_for
 from .ui.sources import SourceController
 from .ui.themes.theme_manager import THEMES, apply_theme
 from .logger.logger import get_logger, configure as configure_log, hub, shutdown as close_log
@@ -124,7 +124,9 @@ class ScreenRecApp(SourceController, QObject):
             QTimer.singleShot(0, lambda: QMessageBox.warning(self.window,self.translator.tr("logging.title"),log_warning))
 
     def show_help(self):
-        QMessageBox.information(self.window, self.translator.tr("help.title"), self.translator.tr("help.description"))
+        shortcuts = "\\n".join(f"{command.shortcut} — {self.translator.tr(command.label_key)}" for command in COMMANDS.values() if command.shortcut)
+        text = self.translator.tr("help.description") + "\\n\\n" + self.translator.tr("help.shortcuts") + "\\n" + shortcuts
+        QMessageBox.information(self.window, self.translator.tr("help.title"), text)
 
     def set_language(self, action):
         language = action.data()
