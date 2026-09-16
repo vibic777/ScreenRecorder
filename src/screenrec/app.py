@@ -217,7 +217,7 @@ class ScreenRecApp(SourceController, QObject):
             self.settings.save()
             log.debug("Settings saved")
         except OSError as exc:
-            self.error(f"Не удалось сохранить настройки: {exc}")
+            self.error(self.translator.tr("error.save_settings", error=exc))
 
     def set_notifications(self, value):
         self.settings.notifications = value
@@ -239,8 +239,8 @@ class ScreenRecApp(SourceController, QObject):
                     f"Монитор {index}: {monitor['width']} × {monitor['height']} "
                     f"({monitor['left']}, {monitor['top']})", monitor)
             if not self.window.monitors.count():
-                raise RuntimeError("Мониторы не найдены.")
-            self.window.status.setText("Готов к записи")
+                raise RuntimeError(self.translator.tr("error.no_monitors"))
+            self.window.status.setText(self.translator.tr("status.ready"))
         except Exception as exc:
             self.window.status.setText(str(exc))
         self.set_busy(False)
@@ -262,7 +262,7 @@ class ScreenRecApp(SourceController, QObject):
             widget.setEnabled(not busy)
 
     def choose_folder(self):
-        folder = QFileDialog.getExistingDirectory(self.window, "Папка записей", self.settings.output_dir)
+        folder = QFileDialog.getExistingDirectory(self.window, self.translator.tr("folder.recordings"), self.settings.output_dir)
         if folder:
             self.settings.output_dir = folder
             self.window.folder.setText(folder)
@@ -274,7 +274,7 @@ class ScreenRecApp(SourceController, QObject):
             directory = Path(self.settings.output_dir)
             directory.mkdir(parents=True, exist_ok=True)
             if not QDesktopServices.openUrl(QUrl.fromLocalFile(str(directory.resolve()))):
-                raise OSError("Не удалось открыть файловый менеджер.")
+                raise OSError(self.translator.tr("error.open_file_manager"))
         except OSError as exc:
             self.error(str(exc))
 
@@ -290,7 +290,7 @@ class ScreenRecApp(SourceController, QObject):
             self.window.pairing.clear()
             self.worker = BrowserWorker(replace(self.settings), self)
             self.worker.pairing_ready.connect(self.show_pairing)
-            self.worker.tab_selected.connect(lambda title: self.window.pairing.setToolTip("Записывается: " + title))
+            self.worker.tab_selected.connect(lambda title: self.window.pairing.setToolTip(self.translator.tr("status.tab_recording") + " " + title))
         else:
             self.worker = RecordingWorker(monitor, self.settings.output_dir, self.settings.fps, self,
                                           settings=replace(self.settings))
@@ -328,7 +328,7 @@ class ScreenRecApp(SourceController, QObject):
             self.stop_deadline = None
         if self.started_at is not None and self.worker and not self.worker.stop_event.is_set():
             elapsed = int(time.monotonic() - self.started_at)
-            self.window.status.setText(f"● Запись  {elapsed // 3600:02}:{elapsed // 60 % 60:02}:{elapsed % 60:02}")
+            self.window.status.setText(self.translator.tr("status.recording_time", hours=elapsed // 3600, minutes=elapsed // 60 % 60, seconds=elapsed % 60))
 
     def stop_recording(self):
         log.info("Stop recording requested")
@@ -338,11 +338,11 @@ class ScreenRecApp(SourceController, QObject):
                 self.stop_deadline = time.monotonic() + 15
             self.window.stop.setEnabled(False)
             self.stop_action.setEnabled(False)
-            self.window.status.setText("Завершение записи…")
+            self.window.status.setText(self.translator.tr("status.finishing"))
 
     def recording_saved(self, path):
         log.info("Recording saved: %s",path)
-        self.window.status.setText(f"Сохранено: {path}")
+        self.window.status.setText(self.translator.tr("status.saved", path=path))
         self.notify(self.translator.tr("notify.saved"), path)
         self.window.recordings.refresh(select=path)
 
@@ -364,7 +364,7 @@ class ScreenRecApp(SourceController, QObject):
 
     def error(self, message):
         log.error("Application error: %s",message)
-        self.window.status.setText(f"Ошибка: {message}")
+        self.window.status.setText(self.translator.tr("status.error", error=message))
         self.notify(self.translator.tr("error.title"), message)
         if not self.exiting:
             self.show_window()
