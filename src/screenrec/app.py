@@ -235,9 +235,7 @@ class ScreenRecApp(SourceController, QObject):
         self.window.monitors.clear()
         try:
             for index, monitor in enumerate(monitors(), 1):
-                self.window.monitors.addItem(
-                    f"Монитор {index}: {monitor['width']} × {monitor['height']} "
-                    f"({monitor['left']}, {monitor['top']})", monitor)
+                self.window.monitors.addItem(self.translator.tr("source.monitor_item", index=index, width=monitor["width"], height=monitor["height"], left=monitor["left"], top=monitor["top"]), monitor)
             if not self.window.monitors.count():
                 raise RuntimeError(self.translator.tr("error.no_monitors"))
             self.window.status.setText(self.translator.tr("status.ready"))
