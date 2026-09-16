@@ -185,5 +185,14 @@
   "tip.refresh_sources": "Refresh the list of monitors and windows.",
   "tip.audio_bitrate": "Audio quality in kilobits per second.",
   "tip.overlay_toggle": "Enable or disable overlays for new recordings.",
-  "tip.format": "Container format used for the output video."
+  "tip.format": "Container format used for the output video.",
+  "tip.player_sort": "Choose the order of recordings.",
+  "tip.player_search": "Filter recordings by name.",
+  "tip.player_list": "Select a recording to preview or manage it.",
+  "tip.pairing": "The connection code is used by the browser extension for the current tab session.",
+  "tip.player_timeline": "Drag the slider to seek through the recording.",
+  "tip.copy_pairing": "Copy the connection code to the clipboard.",
+  "tip.player_volume": "Adjust playback volume.",
+  "tip.player_speed": "Change playback speed.",
+  "tip.extension": "Export the local extension for Chrome or Edge."
 }
