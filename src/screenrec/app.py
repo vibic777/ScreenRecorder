@@ -112,7 +112,7 @@ class ScreenRecApp(SourceController, QObject):
         self.update_summary()
         self.initialize_sources()
         if log_warning:
-            QTimer.singleShot(0, lambda: QMessageBox.warning(self.window,"Логирование",log_warning))
+            QTimer.singleShot(0, lambda: QMessageBox.warning(self.window,self.translator.tr("logging.title"),log_warning))
 
     def set_language(self, action):
         language = action.data()
@@ -142,7 +142,7 @@ class ScreenRecApp(SourceController, QObject):
             self.save_settings()
             log.info("Logging configuration applied")
             if warning:
-                QMessageBox.warning(self.window,"Логирование",warning)
+                QMessageBox.warning(self.window,self.translator.tr("logging.title"),warning)
 
     def configure_filename(self):
         if self.worker:
@@ -286,27 +286,27 @@ class ScreenRecApp(SourceController, QObject):
         self.worker.finalizing.connect(self.finalizing)
         self.worker.finished.connect(self.worker_finished)
         self.set_busy(True)
-        self.window.status.setText("Подготовка записи…")
+        self.window.status.setText(self.translator.tr("status.preparing"))
         self.worker.start()
 
     def finalizing(self):
         log.info("Finalizing recording")
-        self.window.status.setText("Сохранение записи и обработка звука…")
+        self.window.status.setText(self.translator.tr("status.processing"))
         self.window.stop.setEnabled(False)
         self.stop_action.setEnabled(False)
 
     def recording_started(self, path):
         log.info("Recording started: %s",path)
         self.started_at = time.monotonic()
-        self.tray.setToolTip("ScreenRec — идёт запись")
-        self.notify("Запись начата", path)
+        self.tray.setToolTip(self.translator.tr("tray.recording"))
+        self.notify(self.translator.tr("notify.started"), path)
 
     def tick(self):
         problem = hub.take_problem()
         if problem:
             self.settings.logging_enabled = False
             self.save_settings()
-            QMessageBox.warning(self.window,"Логирование",problem)
+            QMessageBox.warning(self.window,self.translator.tr("logging.title"),problem)
         if self.stop_deadline and time.monotonic() > self.stop_deadline:
             encoder = self.worker.encoder if self.worker else None
             if encoder:
@@ -329,7 +329,7 @@ class ScreenRecApp(SourceController, QObject):
     def recording_saved(self, path):
         log.info("Recording saved: %s",path)
         self.window.status.setText(f"Сохранено: {path}")
-        self.notify("Запись сохранена", path)
+        self.notify(self.translator.tr("notify.saved"), path)
         self.window.recordings.refresh(select=path)
 
     def worker_finished(self):
@@ -339,7 +339,7 @@ class ScreenRecApp(SourceController, QObject):
         self.window.pairing.clear()
         self.started_at = None
         self.stop_deadline = None
-        self.tray.setToolTip("ScreenRec — готов к записи")
+        self.tray.setToolTip(self.translator.tr("tray.ready"))
         self.set_busy(False)
         if self.exiting:
             self.application.quit()
@@ -351,10 +351,10 @@ class ScreenRecApp(SourceController, QObject):
     def error(self, message):
         log.error("Application error: %s",message)
         self.window.status.setText(f"Ошибка: {message}")
-        self.notify("Ошибка ScreenRec", message)
+        self.notify(self.translator.tr("error.title"), message)
         if not self.exiting:
             self.show_window()
-            QMessageBox.warning(self.window, "Ошибка ScreenRec", message)
+            QMessageBox.warning(self.window, self.translator.tr("error.title"), message)
 
     def show_window(self):
         self.window.showNormal()
@@ -372,7 +372,7 @@ class ScreenRecApp(SourceController, QObject):
         if self.settings.close_to_tray and QSystemTrayIcon.isSystemTrayAvailable():
             self.tray.show()
             self.window.hide()
-            self.notify("ScreenRec работает в трее", "Для полного закрытия выберите «Выход».")
+            self.notify(self.translator.tr("tray.running"), self.translator.tr("tray.exit_hint"))
         else:
             self.request_exit()
 
@@ -380,8 +380,8 @@ class ScreenRecApp(SourceController, QObject):
         if self.exiting:
             return
         if self.worker and confirm:
-            answer = QMessageBox.question(self.window, "Завершение работы",
-                "Остановить запись, сохранить файл и выйти?",
+            answer = QMessageBox.question(self.window, self.translator.tr("exit.title"),
+                self.translator.tr("exit.confirm"),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No)
             if answer != QMessageBox.StandardButton.Yes:
