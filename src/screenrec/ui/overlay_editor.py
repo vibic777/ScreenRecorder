@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (QDialog, QWidget, QVBoxLayout, QHBoxLayout, QForm
     QPushButton, QCheckBox, QLineEdit, QPlainTextEdit, QDoubleSpinBox, QFontComboBox,
     QColorDialog, QFileDialog, QDialogButtonBox, QLabel, QMessageBox)
 from screenrec.config import templates
+from screenrec.localization import Translator
 from screenrec.recorder.overlay import render, load_image
 
 class Canvas(QWidget):
@@ -30,7 +31,7 @@ class Canvas(QWidget):
         frame=self.frame()
         painter.fillRect(frame,QColor("#344454"))
         painter.setPen(QColor("#a7b5c5"))
-        painter.drawText(frame,Qt.AlignmentFlag.AlignCenter,"Макет кадра")
+        painter.drawText(frame,Qt.AlignmentFlag.AlignCenter,self.editor.t("overlay.canvas"))
         data=deepcopy(self.editor.template)
         if self.editor.picture is None:
             data["image"]["enabled"]=False
@@ -77,7 +78,8 @@ class Canvas(QWidget):
 class OverlayEditor(QDialog):
     def __init__(self, settings, parent=None, aspect=16/9):
         super().__init__(parent)
-        self.setWindowTitle("Наложения: картинка и текст")
+        self.translator = Translator(settings.language)
+        self.setWindowTitle(self.t("overlay.title"))
         self.resize(1000,780)
         self.aspect=max(.2,min(5,aspect))
         self.template=templates.validate(settings.overlay)
@@ -89,28 +91,28 @@ class OverlayEditor(QDialog):
         self.names=QComboBox()
         self.names.setEditable(True)
         self.names.addItems(sorted(self.library))
-        self.names.setCurrentText(settings.overlay_name or "Мой шаблон")
-        row.addWidget(QLabel("Шаблон:"))
+        self.names.setCurrentText(settings.overlay_name or self.t("overlay.my_template"))
+        row.addWidget(QLabel(self.t("overlay.template")))
         row.addWidget(self.names,1)
-        load=QPushButton("Загрузить")
-        save=QPushButton("Сохранить шаблон")
+        load=QPushButton(self.t("overlay.load"))
+        save=QPushButton(self.t("overlay.save_template"))
         row.addWidget(load)
         row.addWidget(save)
         root.addLayout(row)
-        root.addWidget(QLabel("Макет кадра: перемещайте прямоугольник мышью, меняйте размер за нижний правый угол."))
+        root.addWidget(QLabel(self.t("overlay.canvas_hint")))
         self.canvas=Canvas(self)
         root.addWidget(self.canvas,1)
         row=QHBoxLayout()
         self.kind=QComboBox()
-        self.kind.addItem("Картинка","image")
-        self.kind.addItem("Текст","text")
-        self.enabled=QCheckBox("Показывать этот элемент")
+        self.kind.addItem(self.t("overlay.image"),"image")
+        self.kind.addItem(self.t("overlay.text"),"text")
+        self.enabled=QCheckBox(self.t("overlay.show"))
         row.addWidget(self.kind)
         row.addWidget(self.enabled)
         root.addLayout(row)
         row=QHBoxLayout()
         self.geometry={}
-        for key,label in (("x","X, %"),("y","Y, %"),("w","Ширина, %"),("h","Высота, %"),("opacity","Непрозрачность, %")):
+        for key,label in (("x",self.t("overlay.x")),("y",self.t("overlay.y")),("w",self.t("overlay.width")),("h",self.t("overlay.height")),("opacity",self.t("overlay.opacity"))):
             row.addWidget(QLabel(label))
             box=QDoubleSpinBox()
             box.setRange(.5 if key in ("w","h") else 0,100)
@@ -123,7 +125,7 @@ class OverlayEditor(QDialog):
         row=QHBoxLayout(self.image_panel)
         self.image_path=QLineEdit()
         self.image_path.setReadOnly(True)
-        browse=QPushButton("Выбрать картинку…")
+        browse=QPushButton(self.t("overlay.choose_image"))
         row.addWidget(self.image_path,1)
         row.addWidget(browse)
         root.addWidget(self.image_panel)
@@ -134,21 +136,21 @@ class OverlayEditor(QDialog):
         self.font=QFontComboBox()
         self.size=QDoubleSpinBox()
         self.size.setRange(.5,100)
-        self.size.setSuffix(" % высоты кадра")
-        self.color=QPushButton("Цвет текста…")
-        form.addRow("Текст:",self.text)
+        self.size.setSuffix(self.t("overlay.frame_height"))
+        self.color=QPushButton(self.t("overlay.text_color"))
+        form.addRow(self.t("overlay.text_label"),self.text)
         row=QHBoxLayout()
         row.addWidget(self.font,1)
         row.addWidget(self.size)
         row.addWidget(self.color)
-        form.addRow("Шрифт:",row)
+        form.addRow(self.t("overlay.font"),row)
         root.addWidget(self.text_panel)
         self.note=QLabel()
         self.note.setWordWrap(True)
         root.addWidget(self.note)
         buttons=QDialogButtonBox(QDialogButtonBox.StandardButton.Save|QDialogButtonBox.StandardButton.Cancel)
-        buttons.button(QDialogButtonBox.StandardButton.Save).setText("Применить")
-        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Отмена")
+        buttons.button(QDialogButtonBox.StandardButton.Save).setText(self.t("common.apply"))
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText(self.t("common.cancel"))
         root.addWidget(buttons)
         buttons.accepted.connect(self.apply)
         buttons.rejected.connect(self.reject)
@@ -163,6 +165,9 @@ class OverlayEditor(QDialog):
         save.clicked.connect(self.save_template)
         self.refresh_picture()
         self.populate()
+    def t(self, key):
+        return self.translator.tr(key)
+
     def refresh_picture(self):
         self.picture=None
         path=self.template["image"]["path"]
@@ -209,7 +214,7 @@ class OverlayEditor(QDialog):
         self.sync_geometry()
         self.canvas.update()
     def browse(self):
-        path,_=QFileDialog.getOpenFileName(self,"Картинка","","Изображения (*.png *.jpg *.jpeg *.bmp *.webp)")
+        path,_=QFileDialog.getOpenFileName(self,self.t("overlay.image"),"","Изображения (*.png *.jpg *.jpeg *.bmp *.webp)")
         if path:
             try:
                 image=load_image(path)
@@ -219,7 +224,7 @@ class OverlayEditor(QDialog):
                 self.note.setText("")
                 self.populate()
             except Exception as exc:
-                QMessageBox.warning(self,"Картинка",str(exc))
+                QMessageBox.warning(self,self.t("overlay.image"),str(exc))
     def choose_color(self):
         color=QColorDialog.getColor(QColor(self.template["text"]["color"]),self,"Цвет текста")
         if color.isValid():
@@ -232,11 +237,11 @@ class OverlayEditor(QDialog):
             self.refresh_picture()
             self.populate()
         else:
-            self.note.setText("Шаблон с таким именем не найден.")
+            self.note.setText(self.t("overlay.not_found"))
     def save_template(self):
         name=self.names.currentText().strip()
         if not name:
-            self.note.setText("Укажите имя шаблона.")
+            self.note.setText(self.t("overlay.name_required"))
             return
         if not self.valid():
             return
@@ -245,7 +250,7 @@ class OverlayEditor(QDialog):
             templates.save(self.library)
             if self.names.findText(name)<0:
                 self.names.addItem(name)
-            self.note.setText("Шаблон сохранён. «Применить» выбирает его для записи.")
+            self.note.setText(self.t("overlay.saved"))
         except OSError as exc:
             QMessageBox.warning(self,"Шаблон",str(exc))
     def valid(self):
@@ -253,7 +258,7 @@ class OverlayEditor(QDialog):
             try:
                 load_image(self.template["image"]["path"])
             except Exception as exc:
-                QMessageBox.warning(self,"Картинка",str(exc))
+                QMessageBox.warning(self,self.t("overlay.image"),str(exc))
                 return False
         return True
     def apply(self):
