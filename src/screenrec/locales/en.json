@@ -146,5 +146,9 @@
   "logging.file_title": "Log file",
   "region.too_small": "Select an area at least 2 × 2 pixels.",
   "region.instructions": "Select an area • drag inside to move • drag the bottom-right corner to resize",
-  "region.keys": "Enter — confirm • Esc — cancel"
+  "region.keys": "Enter — confirm • Esc — cancel",
+  "menu.help": "Help",
+  "help.about": "About ScreenRec",
+  "help.title": "ScreenRec Help",
+  "help.description": "ScreenRec records your monitor, a selected region, an application window, or a browser tab.\\n\\nUse the Settings menu to configure video, audio, filenames, overlays, themes, and logging. Recordings are available in the Recordings tab."
 }
