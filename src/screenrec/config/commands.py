@@ -11,6 +11,10 @@ class Command:
 
 
 COMMANDS = {
+    "start_recording": Command("start_recording", "Ctrl+Shift+R", "command.start_recording", "global"),
+    "stop_recording": Command("stop_recording", "Ctrl+Shift+S", "command.stop_recording", "global"),
+    "show_window": Command("show_window", "Ctrl+Shift+O", "command.show_window", "global"),
+    "exit": Command("exit", "Ctrl+Shift+Q", "command.exit", "global"),
     "play_pause": Command("play_pause", "Space", "command.play_pause", "player"),
     "seek_backward": Command("seek_backward", "Left", "command.seek_backward", "player"),
     "seek_forward": Command("seek_forward", "Right", "command.seek_forward", "player"),
