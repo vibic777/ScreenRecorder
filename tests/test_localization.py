@@ -5,6 +5,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 from screenrec.config.settings import Settings
 from screenrec.localization import Translator
+from screenrec.config.commands import COMMANDS, commands_for
 from screenrec.ui.main_window import MainWindow
 
 
@@ -36,6 +37,19 @@ class LocalizationStartupTests(unittest.TestCase):
         self.assertEqual(window.start.text(), "Начать запись")
         self.assertEqual(window.source_mode.itemText(0), "Монитор")
 
+    def test_help_contains_localized_sections(self):
+        english = Translator("en").tr("help.description")
+        russian = Translator("ru").tr("help.description")
+        for section in ("RECORDING", "SOURCES", "AUDIO", "FORMATS", "OVERLAYS", "CATALOGUE", "TROUBLESHOOTING"):
+            self.assertIn(section, english)
+        for section in ("ЗАПИСЬ", "ИСТОЧНИКИ", "ЗВУК", "ФОРМАТЫ", "НАЛОЖЕНИЯ", "КАТАЛОГ", "УСТРАНЕНИЕ ПРОБЛЕМ"):
+            self.assertIn(section, russian)
+
+    def test_all_command_labels_are_localized(self):
+        for language in ("en", "ru"):
+            translator = Translator(language)
+            for command in COMMANDS.values():
+                self.assertNotEqual(translator.tr(command.label_key), command.label_key)
     def test_translation_falls_back_for_unknown_language_and_key(self):
         translator = Translator("de")
         self.assertEqual(translator.language, "en")
