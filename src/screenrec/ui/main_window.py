@@ -102,7 +102,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(QLabel(self.t("recording.modes")))
 
         from .recordings_view import RecordingsView
-        self.recordings = RecordingsView(settings.output_dir)
+        self.recordings = RecordingsView(settings.output_dir, language=settings.language)
         self.tabs.addTab(self.recordings,self.t("tab.recordings"))
         self.tabs.currentChanged.connect(lambda index: self.recordings.activate() if index == 1 else self.recordings.stop_playback())
 
