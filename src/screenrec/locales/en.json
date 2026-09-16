@@ -150,5 +150,5 @@
   "menu.help": "Help",
   "help.about": "About ScreenRec",
   "help.title": "ScreenRec Help",
-  "help.description": "ScreenRec records your monitor, a selected region, an application window, or a browser tab.\\n\\nUse the Settings menu to configure video, audio, filenames, overlays, themes, and logging. Recordings are available in the Recordings tab."
+  "help.description": "ScreenRec is a local desktop screen recorder. It does not upload recordings to the cloud.\\n\\nRecording sources:\\n• full monitor\\n• selected screen region\\n• application window\\n• browser tab through the local Chrome/Edge extension\\n\\nRecording options:\\n• MP4, MKV, and WebM\\n• video quality and frame rate\\n• microphone and/or system audio\\n• configurable filename with date, time, and UUID\\n• image and text overlays\\n\\nRecordings are available in the built-in catalogue. You can search, sort, preview, pause, seek, change speed and volume, take a snapshot, use fullscreen mode, or delete a recording after confirmation. Settings, themes, notifications, and diagnostic logging are available from the Settings menu."
 }
