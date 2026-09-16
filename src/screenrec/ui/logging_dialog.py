@@ -5,33 +5,35 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QCheckBox,QLineEdit,QPushButton,
     QLabel,QDialogButtonBox,QFileDialog,QMessageBox)
 from screenrec.logger.logger import LEVELS,get_default_log_path
+from screenrec.localization import Translator
 
 class LoggingDialog(QDialog):
     def __init__(self,settings,parent=None):
         super().__init__(parent)
         self.settings=settings
-        self.setWindowTitle("Логирование")
+        self.translator=Translator(settings.language)
+        self.setWindowTitle(self.t("logging.title"))
         self.setMinimumWidth(680)
         layout=QVBoxLayout(self)
-        self.enabled=QCheckBox("Включить логирование")
+        self.enabled=QCheckBox(self.t("logging.enable"))
         self.enabled.setChecked(settings.logging_enabled)
         layout.addWidget(self.enabled)
-        layout.addWidget(QLabel("Файл лога (по умолчанию рядом с EXE):"))
+        layout.addWidget(QLabel(self.t("logging.file")))
         row=QHBoxLayout()
         self.path=QLineEdit(settings.log_path or str(get_default_log_path()))
-        browse=QPushButton("Выбрать файл…")
+        browse=QPushButton(self.t("logging.choose"))
         row.addWidget(self.path,1)
         row.addWidget(browse)
         layout.addLayout(row)
         row=QHBoxLayout()
-        default=QPushButton("Путь по умолчанию")
-        open_file=QPushButton("Открыть лог")
-        open_dir=QPushButton("Открыть папку")
+        default=QPushButton(self.t("logging.default"))
+        open_file=QPushButton(self.t("logging.open_file"))
+        open_dir=QPushButton(self.t("logging.open_folder"))
         row.addWidget(default)
         row.addWidget(open_file)
         row.addWidget(open_dir)
         layout.addLayout(row)
-        layout.addWidget(QLabel("Уровни включаются независимо (не минимальный порог):"))
+        layout.addWidget(QLabel(self.t("logging.levels")))
         row=QHBoxLayout()
         self.levels={}
         for name in LEVELS:
@@ -47,8 +49,8 @@ class LoggingDialog(QDialog):
         note.setWordWrap(True)
         layout.addWidget(note)
         buttons=QDialogButtonBox(QDialogButtonBox.StandardButton.Save|QDialogButtonBox.StandardButton.Cancel)
-        buttons.button(QDialogButtonBox.StandardButton.Save).setText("Сохранить")
-        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Отмена")
+        buttons.button(QDialogButtonBox.StandardButton.Save).setText(self.t("common.save"))
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText(self.t("common.cancel"))
         layout.addWidget(buttons)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
@@ -56,8 +58,11 @@ class LoggingDialog(QDialog):
         default.clicked.connect(lambda:self.path.setText(str(get_default_log_path())))
         open_file.clicked.connect(lambda:self.open(False))
         open_dir.clicked.connect(lambda:self.open(True))
+    def t(self,key):
+        return self.translator.tr(key)
+
     def browse(self):
-        path,_=QFileDialog.getSaveFileName(self,"Файл лога",self.path.text(),"Логи (*.log);;Все файлы (*)")
+        path,_=QFileDialog.getSaveFileName(self,self.t("logging.file_title"),self.path.text(),"Логи (*.log);;Все файлы (*)")
         if path:
             self.path.setText(path)
     def open(self,directory):
@@ -65,10 +70,10 @@ class LoggingDialog(QDialog):
         if directory:
             path=path.parent
         if not path.exists():
-            QMessageBox.information(self,"Логирование","Файл или папка ещё не существует.")
+            QMessageBox.information(self,self.t("logging.title"),self.t("logging.missing"))
             return
         if not QDesktopServices.openUrl(QUrl.fromLocalFile(str(path.resolve()))):
-            QMessageBox.warning(self,"Логирование","Не удалось открыть выбранный путь.")
+            QMessageBox.warning(self,self.t("logging.title"),self.t("logging.open_error"))
     def result_settings(self):
         path=self.path.text().strip()
         return replace(self.settings,logging_enabled=self.enabled.isChecked(),
