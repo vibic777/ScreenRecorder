@@ -40,5 +40,38 @@
   },
   "bridgeJustification": {
     "message": "Передача выбранной вкладки в локальное приложение ScreenRec"
+  },
+  "popupStart": {
+    "message": "Подключить и записывать эту вкладку"
+  },
+  "popupTitle": {
+    "message": "Записать эту вкладку"
+  },
+  "popupConnecting": {
+    "message": "Подключение…"
+  },
+  "popupNoActive": {
+    "message": "Нет активной записи"
+  },
+  "popupCode": {
+    "message": "Код подключения"
+  },
+  "popupStopping": {
+    "message": "Завершение записи…"
+  },
+  "popupConnectError": {
+    "message": "Не удалось подключиться"
+  },
+  "popupPlaceholder": {
+    "message": "порт:код"
+  },
+  "popupHint": {
+    "message": "В ScreenRec выберите «Вкладка браузера», нажмите «Начать запись» и скопируйте код подключения."
+  },
+  "popupStarted": {
+    "message": "Запись началась. Можно переключаться на другие вкладки."
+  },
+  "popupStop": {
+    "message": "Остановить запись вкладки"
   }
 }

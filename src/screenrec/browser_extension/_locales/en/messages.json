@@ -40,5 +40,38 @@
   },
   "bridgeJustification": {
     "message": "Transfer selected tab locally to ScreenRec"
+  },
+  "popupStart": {
+    "message": "Connect and record this tab"
+  },
+  "popupTitle": {
+    "message": "Record this tab"
+  },
+  "popupConnecting": {
+    "message": "Connecting…"
+  },
+  "popupNoActive": {
+    "message": "No active recording"
+  },
+  "popupCode": {
+    "message": "Connection code"
+  },
+  "popupStopping": {
+    "message": "Stopping recording…"
+  },
+  "popupConnectError": {
+    "message": "Could not connect"
+  },
+  "popupPlaceholder": {
+    "message": "port:code"
+  },
+  "popupHint": {
+    "message": "In ScreenRec select Browser tab, click Start recording, and copy the connection code."
+  },
+  "popupStarted": {
+    "message": "Recording started. You can switch to other tabs."
+  },
+  "popupStop": {
+    "message": "Stop tab recording"
   }
 }
