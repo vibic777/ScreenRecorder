@@ -186,9 +186,8 @@ class RecordingsView(QWidget):
         self.sort.currentIndexChanged.connect(lambda _:self.refresh())
         self.list.currentItemChanged.connect(self.selected)
         self.list.itemDoubleClicked.connect(lambda *_:self.toggle_play())
-        for key,callback in (("Space",self.toggle_play),("Left",lambda:self.seek(-5000)),
-                             ("Right",lambda:self.seek(5000)),("F11",self.toggle_fullscreen),
-                             ("Escape",self.leave_fullscreen)):
+        callbacks={"play_pause":self.toggle_play,"stop_playback":self.stop_playback,"seek_backward":lambda:self.seek(-5000),"seek_forward":lambda:self.seek(5000),"fullscreen":self.toggle_fullscreen,"cancel_or_leave_fullscreen":self.leave_fullscreen,"previous_recording":lambda:self.adjacent(-1),"next_recording":lambda:self.adjacent(1),"snapshot":self.snapshot}
+        for command in commands_for("player"):
             shortcut=QShortcut(QKeySequence(command.shortcut),self.pane)
             shortcut.activated.connect(callbacks[command.key])
         self.refresh()
