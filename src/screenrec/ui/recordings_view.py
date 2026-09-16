@@ -6,7 +6,8 @@ from PySide6.QtGui import QShortcut,QKeySequence,QDesktopServices,QPainter,QColo
 from PySide6.QtMultimedia import QMediaPlayer,QAudioOutput,QMediaMetaData
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (QWidget,QVBoxLayout,QHBoxLayout,QPushButton,QLabel,QSlider,
- QLineEdit,QComboBox,QSplitter,QTreeWidget,QTreeWidgetItem,QDialog,QFileDialog,QStyle,QStackedWidget)
+ QLineEdit,QComboBox,QSplitter,QTreeWidget,QTreeWidgetItem,QDialog,QFileDialog,QStyle,QStackedWidget,
+ QMessageBox)
 from screenrec.logger.logger import get_logger
 log=get_logger(__name__)
 
@@ -139,9 +140,13 @@ class RecordingsView(QWidget):
         expand.setCheckable(True)
         full=QPushButton("Полный экран")
         snapshot=QPushButton("Снимок кадра…")
+        self.delete=QPushButton("Удалить запись")
+        self.delete.setToolTip("Удалить выбранный файл записи")
+        self.delete.setEnabled(False)
         row.addWidget(expand)
         row.addWidget(full)
         row.addWidget(snapshot)
+        row.addWidget(self.delete)
         self.pane_layout.addLayout(row)
         self.splitter.addWidget(self.pane)
         self.splitter.setSizes([350,500])
@@ -171,6 +176,7 @@ class RecordingsView(QWidget):
         expand.toggled.connect(self.library.setHidden)
         full.clicked.connect(self.toggle_fullscreen)
         snapshot.clicked.connect(self.snapshot)
+        self.delete.clicked.connect(self.delete_current)
         refresh.clicked.connect(lambda:self.refresh())
         open_folder.clicked.connect(lambda:QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.directory.resolve()))))
         self.search.textChanged.connect(self.filter)
@@ -236,6 +242,7 @@ class RecordingsView(QWidget):
         self.first_image=None
         self.paused_frame.update()
         self.info.setText(self.current.name)
+        self.delete.setEnabled(not self.recording)
         self.priming=not self.recording
         self.audio.setMuted(True)
         self.player.setSource(QUrl.fromLocalFile(str(self.current)))
@@ -342,6 +349,37 @@ class RecordingsView(QWidget):
         path,_=QFileDialog.getSaveFileName(self,"Снимок кадра",str(self.directory/"frame.png"),"PNG (*.png)")
         if path and not self.frame_image.save(path,"PNG"):
             self.info.setText("Не удалось сохранить кадр.")
+    def delete_current(self):
+        if self.recording or not self.current:
+            return
+        path=self.current
+        if not path.is_file():
+            self.refresh()
+            return
+        answer=QMessageBox.question(
+            self,
+            "Удалить запись",
+            f"Удалить запись «{path.name}»?\n\nФайл будет удалён без возможности восстановления.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        self.stop_playback()
+        self.player.setSource(QUrl())
+        try:
+            path.unlink()
+        except OSError as exc:
+            self.info.setText("Не удалось удалить запись: "+str(exc))
+            log.error("Failed to delete recording %s: %s",path,exc)
+            return
+        self.current=None
+        self.delete.setEnabled(False)
+        self.frame_image=None
+        self.first_image=None
+        self.paused_frame.update()
+        self.info.setText("Запись удалена.")
+        self.refresh()
     def set_directory(self,directory):
         self.directory=Path(directory)
         self.folder.setText(str(self.directory))
@@ -360,6 +398,7 @@ class RecordingsView(QWidget):
             self.leave_fullscreen()
             self.stop_playback()
         self.setEnabled(not busy)
+        self.delete.setEnabled(bool(self.current) and not busy)
         if previous and not busy and self.current and self.isVisible():
             self.load(self.current)
     def activate(self):
