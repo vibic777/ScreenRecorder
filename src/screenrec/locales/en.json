@@ -225,5 +225,9 @@
   "player.delete_confirm": "Delete recording “{name}”?\\n\\nThe file will be permanently deleted.",
   "player.snapshot_title": "Save snapshot",
   "source.region.selected": "Region: {width} × {height} — X={left}, Y={top}",
-  "extension.saved.detail": "Folder: {folder}\\n\\nOpen chrome://extensions or edge://extensions. Enable Developer mode, click “Load unpacked”, and select this folder.\\nThen start a tab session in ScreenRec, copy the code, and click the extension icon in the desired tab."
+  "extension.saved.detail": "Folder: {folder}\\n\\nOpen chrome://extensions or edge://extensions. Enable Developer mode, click “Load unpacked”, and select this folder.\\nThen start a tab session in ScreenRec, copy the code, and click the extension icon in the desired tab.",
+  "theme.green": "Green",
+  "theme.blue": "Blue",
+  "theme.gray": "Gray",
+  "theme.black": "Black"
 }

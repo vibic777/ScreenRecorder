@@ -95,7 +95,7 @@ class ScreenRecApp(SourceController, QObject):
         self.theme_group.setExclusive(True)
         self.theme_actions = {}
         for key, theme in THEMES.items():
-            action = self.theme_menu.addAction(QIcon(str(theme["window_icon_path"])), theme["label"])
+            action = self.theme_menu.addAction(QIcon(str(theme["window_icon_path"])), self.translator.tr(f"theme.{key}"))
             action.setCheckable(True)
             action.setData(key)
             self.theme_group.addAction(action)

@@ -225,5 +225,9 @@
   "player.delete_confirm": "Удалить запись «{name}»?\\n\\nФайл будет удалён без возможности восстановления.",
   "player.snapshot_title": "Снимок кадра",
   "source.region.selected": "Область: {width} × {height} — X={left}, Y={top}",
-  "extension.saved.detail": "Папка: {folder}\\n\\nОткройте chrome://extensions или edge://extensions. Включите режим разработчика, нажмите «Загрузить распакованное» и выберите эту папку.\\nЗатем начните сеанс вкладки в ScreenRec, скопируйте код и нажмите значок расширения в нужной вкладке."
+  "extension.saved.detail": "Папка: {folder}\\n\\nОткройте chrome://extensions или edge://extensions. Включите режим разработчика, нажмите «Загрузить распакованное» и выберите эту папку.\\nЗатем начните сеанс вкладки в ScreenRec, скопируйте код и нажмите значок расширения в нужной вкладке.",
+  "theme.green": "Зелёная",
+  "theme.blue": "Синяя",
+  "theme.gray": "Серая",
+  "theme.black": "Чёрная"
 }
