@@ -202,5 +202,15 @@
   "tip.filename_prefix": "Задаёт основу имени каждого файла записи.",
   "tip.overlay_element": "Включает выбранный элемент наложения в новых записях.",
   "tip.filename_date": "Добавляет дату записи в имя файла.",
-  "tip.filename_uuid": "Добавляет уникальный идентификатор, чтобы избежать совпадений имён."
+  "tip.filename_uuid": "Добавляет уникальный идентификатор, чтобы избежать совпадений имён.",
+  "error.save_settings": "Не удалось сохранить настройки: {error}",
+  "error.no_monitors": "Мониторы не найдены.",
+  "status.recording_time": "● Запись  {hours:02}:{minutes:02}:{seconds:02}",
+  "error.open_file_manager": "Не удалось открыть файловый менеджер.",
+  "status.finishing": "Завершение записи…",
+  "status.error": "Ошибка: {error}",
+  "folder.recordings": "Папка записей",
+  "source.monitor_item": "Монитор {index}: {width} × {height} ({left}, {top})",
+  "status.tab_recording": "Записывается:",
+  "status.saved": "Сохранено: {path}"
 }

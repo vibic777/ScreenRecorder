@@ -202,5 +202,15 @@
   "tip.filename_prefix": "Sets the base text used at the start of each recording filename.",
   "tip.overlay_element": "Enables the selected overlay element in new recordings.",
   "tip.filename_date": "Adds the recording date to the filename.",
-  "tip.filename_uuid": "Adds a unique identifier to prevent filename collisions."
+  "tip.filename_uuid": "Adds a unique identifier to prevent filename collisions.",
+  "error.save_settings": "Could not save settings: {error}",
+  "error.no_monitors": "No monitors found.",
+  "status.recording_time": "● Recording  {hours:02}:{minutes:02}:{seconds:02}",
+  "error.open_file_manager": "Could not open the file manager.",
+  "status.finishing": "Finishing recording…",
+  "status.error": "Error: {error}",
+  "folder.recordings": "Recordings folder",
+  "source.monitor_item": "Monitor {index}: {width} × {height} ({left}, {top})",
+  "status.tab_recording": "Recording tab:",
+  "status.saved": "Saved: {path}"
 }
