@@ -7,6 +7,7 @@ from PySide6.QtGui import QActionGroup, QAction, QDesktopServices, QIcon
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QSystemTrayIcon
 
 from .config.settings import Settings
+from .localization import Translator, SUPPORTED_LANGUAGES
 from .recorder.screen import monitors
 from .recorder.worker import RecordingWorker
 from .ui.main_window import MainWindow
@@ -24,6 +25,7 @@ class ScreenRecApp(SourceController, QObject):
         super().__init__(application)
         self.application = application
         self.settings = Settings.load()
+        self.translator = Translator(self.settings.language)
         log_warning = self.apply_logging()
         log.info("Application started")
         self.worker = None
@@ -43,12 +45,12 @@ class ScreenRecApp(SourceController, QObject):
         self.stop_action.triggered.connect(self.stop_recording)
         self.show_action.triggered.connect(self.show_window)
         self.exit_action.triggered.connect(self.request_exit)
-        menu = self.window.menuBar().addMenu("Файл")
+        menu = self.window.menuBar().addMenu(self.translator.tr("menu.file", fallback="File"))
         menu.addAction(self.start_action)
         menu.addAction(self.stop_action)
         menu.addSeparator()
         menu.addAction(self.exit_action)
-        settings_menu = self.window.menuBar().addMenu("Настройки")
+        settings_menu = self.window.menuBar().addMenu(self.translator.tr("menu.settings", fallback="Settings"))
         self.logging_action = settings_menu.addAction("Логирование…")
         self.logging_action.triggered.connect(self.configure_logging)
         self.configure_action = settings_menu.addAction("Конфигуратор записи…")
@@ -67,6 +69,18 @@ class ScreenRecApp(SourceController, QObject):
         notifications.toggled.connect(self.set_notifications)
         self.tray, self.tray_menu = create_tray(self.window, self.icon, self.start_action,
                                                self.stop_action, self.show_action, self.exit_action)
+        self.language_menu = settings_menu.addMenu(self.translator.tr("menu.language", fallback="Language"))
+        self.language_group = QActionGroup(self)
+        self.language_group.setExclusive(True)
+        self.language_actions = {}
+        for key, label in SUPPORTED_LANGUAGES.items():
+            action = self.language_menu.addAction(label)
+            action.setCheckable(True)
+            action.setData(key)
+            action.setChecked(key == self.settings.language)
+            self.language_group.addAction(action)
+            self.language_actions[key] = action
+        self.language_group.triggered.connect(self.set_language)
         self.theme_menu = settings_menu.addMenu("Тема")
         self.theme_group = QActionGroup(self)
         self.theme_group.setExclusive(True)
@@ -100,6 +114,17 @@ class ScreenRecApp(SourceController, QObject):
         if log_warning:
             QTimer.singleShot(0, lambda: QMessageBox.warning(self.window,"Логирование",log_warning))
 
+    def set_language(self, action):
+        language = action.data()
+        if language == self.settings.language:
+            return
+        self.settings.language = language
+        self.settings.save()
+        QMessageBox.information(
+            self.window,
+            self.translator.tr("language.changed_title"),
+            self.translator.tr("language.restart_required"),
+        )
     def apply_logging(self):
         path, warning = configure_log(self.settings.logging_enabled,self.settings.log_path,self.settings.log_levels)
         if self.settings.logging_enabled and path is None:
