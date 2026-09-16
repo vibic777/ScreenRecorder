@@ -3,6 +3,7 @@ import json
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
+import sys
 
 from .settings import Settings
 from .recording import FORMATS, QUALITIES, AUDIO_MODES
@@ -56,3 +57,14 @@ def load_profile(path: Path) -> Settings:
     if settings.theme not in ("green", "blue", "orange", "pink", "purple", "gray", "black"): settings.theme = defaults.theme
     if settings.source_mode not in ("monitor", "region", "window", "tab"): settings.source_mode = defaults.source_mode
     return settings
+def default_profile_path() -> Path:
+    """Return the directory where a default profile is discovered."""
+    executable = Path(sys.executable if getattr(sys, "frozen", False) else sys.argv[0]).resolve()
+    return executable.parent / "default.json"
+
+
+def load_default_profile() -> Settings | None:
+    path = default_profile_path()
+    if not path.is_file():
+        return None
+    return load_profile(path)

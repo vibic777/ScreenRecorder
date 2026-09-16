@@ -7,7 +7,7 @@ from PySide6.QtGui import QActionGroup, QAction, QDesktopServices, QIcon
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QSystemTrayIcon
 
 from .config.settings import Settings
-from .config.profiles import save_profile, load_profile
+from .config.profiles import save_profile, load_profile, load_default_profile
 from .localization import Translator, SUPPORTED_LANGUAGES
 from .recorder.screen import monitors
 from .recorder.worker import RecordingWorker
@@ -26,7 +26,7 @@ class ScreenRecApp(SourceController, QObject):
     def __init__(self, application):
         super().__init__(application)
         self.application = application
-        self.settings = Settings.load()
+        self.settings = load_default_profile() or Settings.load()
         self.translator = Translator(self.settings.language)
         log_warning = self.apply_logging()
         log.info("Application started")
