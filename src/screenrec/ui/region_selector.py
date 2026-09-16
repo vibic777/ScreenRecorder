@@ -1,24 +1,27 @@
 from PySide6.QtCore import Qt, QRect, QPoint
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import QDialog
+from screenrec.localization import Translator
 
 
-def physical_region(rect, logical_width, logical_height, monitor):
+def physical_region(rect, logical_width, logical_height, monitor, language="en"):
     sx, sy = monitor["width"] / logical_width, monitor["height"] / logical_height
     left = max(0, min(monitor["width"], round(rect.x() * sx)))
     top = max(0, min(monitor["height"], round(rect.y() * sy)))
     right = max(left, min(monitor["width"], round((rect.x()+rect.width()) * sx)))
     bottom = max(top, min(monitor["height"], round((rect.y()+rect.height()) * sy)))
     if right-left < 2 or bottom-top < 2:
-        raise ValueError("Выделите область размером хотя бы 2 × 2 пикселя.")
+        raise ValueError(Translator(language).tr("region.too_small"))
     return {"kind":"region", "left":monitor["left"]+left, "top":monitor["top"]+top,
             "width":right-left, "height":bottom-top}
 
 
 class RegionSelector(QDialog):
-    def __init__(self, screen, monitor, saved=None):
+    def __init__(self, screen, monitor, saved=None, language="en"):
         super().__init__(None, Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.monitor = monitor
+        self.language = language
+        self.translator = Translator(language)
         self.setGeometry(screen.geometry())
         self.background = screen.grabWindow(0)
         self.setMouseTracking(True)
@@ -45,8 +48,8 @@ class RegionSelector(QDialog):
             painter.drawRect(self.selection)
             painter.fillRect(QRect(self.selection.bottomRight()-QPoint(6,6), self.selection.bottomRight()+QPoint(6,6)), QColor("#49a7ff"))
         painter.setPen(Qt.GlobalColor.white)
-        painter.drawText(20, 30, "Выделите область • внутри — перемещение • правый нижний угол — размер")
-        painter.drawText(20, 55, "Enter — подтвердить • Esc — отменить")
+        painter.drawText(20, 30, self.translator.tr("region.instructions"))
+        painter.drawText(20, 55, self.translator.tr("region.keys"))
 
     def mousePressEvent(self, event):
         if event.button() != Qt.MouseButton.LeftButton:
@@ -89,7 +92,7 @@ class RegionSelector(QDialog):
             self.reject()
 
     def selected_region(self):
-        return physical_region(self.selection, self.width(), self.height(), self.monitor)
+        return physical_region(self.selection, self.width(), self.height(), self.monitor, self.language)
 
 def screen_for_monitor(monitor, index):
     import platform

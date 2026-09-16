@@ -81,7 +81,7 @@ class SourceController:
         from .region_selector import screen_for_monitor
         try:
             screen = screen_for_monitor(monitor, self.window.monitors.currentIndex())
-            dialog = RegionSelector(screen, monitor, self.settings.region)
+            dialog = RegionSelector(screen, monitor, self.settings.region, self.settings.language)
             if dialog.exec():
                 self.settings.region = dialog.selected_region()
                 log.debug("Recording region selected: %s",self.settings.region)
