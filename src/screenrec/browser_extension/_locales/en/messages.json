@@ -1,1 +1,44 @@
-{"extensionName":{"message":"ScreenRec — Tab Recorder"},"extensionDescription":{"message":"Transfer the selected tab locally to ScreenRec. No cloud."}}
+{
+  "extensionName": {
+    "message": "ScreenRec — Tab Recorder"
+  },
+  "extensionDescription": {
+    "message": "Transfer the selected tab locally to ScreenRec. No cloud."
+  },
+  "captureDenied": {
+    "message": "The browser denied tab capture"
+  },
+  "stalePairing": {
+    "message": "Code expired or app unavailable"
+  },
+  "invalidPairing": {
+    "message": "Invalid connection code"
+  },
+  "tabAlreadyRecording": {
+    "message": "This tab is already being recorded. Stop it first."
+  },
+  "uploadBehind": {
+    "message": "Video transfer is falling behind. Reduce quality."
+  },
+  "tabDefault": {
+    "message": "Tab"
+  },
+  "bridgeError": {
+    "message": "ScreenRec connection error: "
+  },
+  "encoderError": {
+    "message": "Browser encoder error"
+  },
+  "startTabSession": {
+    "message": "Start a new tab session in ScreenRec"
+  },
+  "alreadyRecording": {
+    "message": "Recording is already active"
+  },
+  "webmUnsupported": {
+    "message": "The browser does not support WebM recording"
+  },
+  "bridgeJustification": {
+    "message": "Transfer selected tab locally to ScreenRec"
+  }
+}

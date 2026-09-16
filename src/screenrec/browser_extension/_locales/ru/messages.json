@@ -1,1 +1,44 @@
-{"extensionName":{"message":"ScreenRec — запись вкладки"},"extensionDescription":{"message":"Локальная передача выбранной вкладки в ScreenRec. Без облака."}}
+{
+  "extensionName": {
+    "message": "ScreenRec — запись вкладки"
+  },
+  "extensionDescription": {
+    "message": "Локальная передача выбранной вкладки в ScreenRec. Без облака."
+  },
+  "captureDenied": {
+    "message": "Браузер отказал в захвате вкладки"
+  },
+  "stalePairing": {
+    "message": "Код устарел или приложение недоступно"
+  },
+  "invalidPairing": {
+    "message": "Неверный код подключения"
+  },
+  "tabAlreadyRecording": {
+    "message": "Уже записывается вкладка. Сначала остановите её."
+  },
+  "uploadBehind": {
+    "message": "Передача видео не успевает за записью. Уменьшите качество."
+  },
+  "tabDefault": {
+    "message": "Вкладка"
+  },
+  "bridgeError": {
+    "message": "Ошибка связи со ScreenRec: "
+  },
+  "encoderError": {
+    "message": "Ошибка браузерного кодировщика"
+  },
+  "startTabSession": {
+    "message": "Начните новый сеанс вкладки в ScreenRec"
+  },
+  "alreadyRecording": {
+    "message": "Уже идёт запись"
+  },
+  "webmUnsupported": {
+    "message": "Браузер не поддерживает запись WebM"
+  },
+  "bridgeJustification": {
+    "message": "Передача выбранной вкладки в локальное приложение ScreenRec"
+  }
+}
