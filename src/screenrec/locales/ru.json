@@ -1,5 +1,1 @@
-{
-  "app.name": "ScreenRec",
-  "language.english": "Английский",
-  "language.russian": "Русский"
-}
+{"menu.file":"Файл","menu.settings":"Настройки","menu.language":"Язык","language.changed_title":"Язык изменён","language.restart_required":"Перезапустите ScreenRec, чтобы применить новый язык."}
