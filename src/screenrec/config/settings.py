@@ -31,7 +31,7 @@ class Settings:
     overlay_enabled: bool = False
     overlay_name: str = ""
     overlay: dict = field(default_factory=default_template)
-    theme: str = "blue"
+    theme: str = "gray"
     language: str = "en"
     source_mode: str = "monitor"
     region: dict = field(default_factory=dict)
@@ -59,7 +59,7 @@ class Settings:
             if settings.language not in ("en", "ru"):
                 settings.language = "en"
             if settings.theme not in ("green", "blue", "gray", "black"):
-                settings.theme = "blue"
+                settings.theme = "gray"
             if settings.source_mode not in ("monitor", "region", "window", "tab"):
                 settings.source_mode = "monitor"
             if settings.audio_bitrate not in (96, 128, 192, 256, 320):

@@ -33,7 +33,7 @@ class ScreenRecApp(SourceController, QObject):
         self.exiting = False
         self.started_at = None
         self.stop_deadline = None
-        self.icon = QIcon(str(Path(__file__).parent / "assets/icons/icon_blue.svg"))
+        self.icon = QIcon(str(Path(__file__).parent / "assets/icons/icon_gray.svg"))
         application.setWindowIcon(self.icon)
         application.setQuitOnLastWindowClosed(False)
         self.window = MainWindow(self.settings, self.icon)
@@ -189,7 +189,7 @@ class ScreenRecApp(SourceController, QObject):
             self.save_settings()
 
     def set_theme(self, name, *, save=True):
-        name = name if name in THEMES else "blue"
+        name = name if name in THEMES else "gray"
         self.icon = apply_theme(self.application, self.window, self.tray, name)
         self.settings.theme = name
         self.theme_actions[name].setChecked(True)
