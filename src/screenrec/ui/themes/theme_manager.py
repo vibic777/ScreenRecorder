@@ -17,7 +17,7 @@ THEMES = {
 }
 
 def apply_theme(application, window, tray, name):
-    theme = THEMES.get(name, THEMES["blue"])
+    theme = THEMES.get(name, THEMES["gray"])
     palette = QPalette()
     for role, color in (
         (QPalette.ColorRole.Window, theme["background"]),
