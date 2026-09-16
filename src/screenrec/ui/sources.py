@@ -106,6 +106,6 @@ class SourceController:
                 target = target.with_name(target.name + "-" + datetime.now().strftime("%Y%m%d-%H%M%S-%f"))
             shutil.copytree(source, target)
             QMessageBox.information(self.window, self.translator.tr("extension.saved"),
-                self.translator.tr("extension.saved.detail", folder=target)
+                self.translator.tr("extension.saved.detail", folder=target))
         except OSError as exc:
             self.error(str(exc))
