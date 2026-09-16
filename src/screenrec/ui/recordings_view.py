@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (QWidget,QVBoxLayout,QHBoxLayout,QPushButton,QLabe
  QMessageBox)
 from screenrec.logger.logger import get_logger
 from screenrec.localization import Translator
+from screenrec.config.commands import commands_for
 log=get_logger(__name__)
 
 def clock_text(milliseconds):
@@ -188,8 +189,8 @@ class RecordingsView(QWidget):
         for key,callback in (("Space",self.toggle_play),("Left",lambda:self.seek(-5000)),
                              ("Right",lambda:self.seek(5000)),("F11",self.toggle_fullscreen),
                              ("Escape",self.leave_fullscreen)):
-            shortcut=QShortcut(QKeySequence(key),self.pane)
-            shortcut.activated.connect(callback)
+            shortcut=QShortcut(QKeySequence(command.shortcut),self.pane)
+            shortcut.activated.connect(callbacks[command.key])
         self.refresh()
     def t(self,key):
         return self.translator.tr(key)
