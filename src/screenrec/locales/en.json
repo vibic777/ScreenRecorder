@@ -143,5 +143,8 @@
   "logging.choose": "Choose file…",
   "logging.default": "Default path",
   "status.processing": "Saving recording and processing audio…",
-  "logging.file_title": "Log file"
+  "logging.file_title": "Log file",
+  "region.too_small": "Select an area at least 2 × 2 pixels.",
+  "region.instructions": "Select an area • drag inside to move • drag the bottom-right corner to resize",
+  "region.keys": "Enter — confirm • Esc — cancel"
 }

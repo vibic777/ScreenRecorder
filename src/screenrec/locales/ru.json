@@ -143,5 +143,8 @@
   "logging.choose": "Выбрать файл…",
   "logging.default": "Путь по умолчанию",
   "status.processing": "Сохранение записи и обработка звука…",
-  "logging.file_title": "Файл лога"
+  "logging.file_title": "Файл лога",
+  "region.too_small": "Выделите область размером хотя бы 2 × 2 пикселя.",
+  "region.instructions": "Выделите область • внутри — перемещение • правый нижний угол — размер",
+  "region.keys": "Enter — подтвердить • Esc — отменить"
 }
