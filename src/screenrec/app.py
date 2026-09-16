@@ -23,10 +23,10 @@ log = get_logger(__name__)
 
 
 class ScreenRecApp(SourceController, QObject):
-    def __init__(self, application):
+    def __init__(self, application, profile_path=None):
         super().__init__(application)
         self.application = application
-        self.settings = load_default_profile() or Settings.load()
+        self.settings = load_profile(profile_path) if profile_path else (load_default_profile() or Settings.load())
         self.translator = Translator(self.settings.language)
         log_warning = self.apply_logging()
         log.info("Application started")
