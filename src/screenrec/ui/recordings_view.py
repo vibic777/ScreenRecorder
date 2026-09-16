@@ -7,7 +7,7 @@ from PySide6.QtMultimedia import QMediaPlayer,QAudioOutput,QMediaMetaData
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (QWidget,QVBoxLayout,QHBoxLayout,QPushButton,QLabel,QSlider,
  QLineEdit,QComboBox,QSplitter,QTreeWidget,QTreeWidgetItem,QDialog,QFileDialog,QStyle,QStackedWidget,
- QMessageBox)
+ QMessageBox,QApplication,QLineEdit,QPlainTextEdit,QAbstractSpinBox,QComboBox)
 from screenrec.logger.logger import get_logger
 from screenrec.localization import Translator
 from screenrec.config.commands import commands_for
@@ -189,8 +189,14 @@ class RecordingsView(QWidget):
         callbacks={"play_pause":self.toggle_play,"stop_playback":self.stop_playback,"seek_backward":lambda:self.seek(-5000),"seek_forward":lambda:self.seek(5000),"fullscreen":self.toggle_fullscreen,"cancel_or_leave_fullscreen":self.leave_fullscreen,"previous_recording":lambda:self.adjacent(-1),"next_recording":lambda:self.adjacent(1),"snapshot":self.snapshot}
         for command in commands_for("player"):
             shortcut=QShortcut(QKeySequence(command.shortcut),self.pane)
-            shortcut.activated.connect(callbacks[command.key])
+            shortcut.activated.connect(lambda command=command: self._run_shortcut(command, callbacks[command.key]))
         self.refresh()
+    def _run_shortcut(self, command, callback):
+        focus = QApplication.focusWidget()
+        if isinstance(focus, (QLineEdit, QPlainTextEdit, QAbstractSpinBox, QComboBox)):
+            return
+        callback()
+
     def t(self,key):
         return self.translator.tr(key)
 
