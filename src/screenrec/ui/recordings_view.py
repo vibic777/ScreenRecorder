@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (QWidget,QVBoxLayout,QHBoxLayout,QPushButton,QLabe
  QLineEdit,QComboBox,QSplitter,QTreeWidget,QTreeWidgetItem,QDialog,QFileDialog,QStyle,QStackedWidget,
  QMessageBox)
 from screenrec.logger.logger import get_logger
+from screenrec.localization import Translator
 log=get_logger(__name__)
 
 def clock_text(milliseconds):
@@ -33,7 +34,7 @@ class Fullscreen(QDialog):
     def __init__(self,owner):
         super().__init__(owner,Qt.WindowType.Window)
         self.owner=owner
-        self.setWindowTitle("ScreenRec — проигрыватель")
+        self.setWindowTitle(self.owner.t("player.title"))
         self.layout=QVBoxLayout(self)
         self.layout.setContentsMargins(0,0,0,0)
     def closeEvent(self,event):
@@ -46,9 +47,10 @@ class Fullscreen(QDialog):
             super().keyPressEvent(event)
 
 class RecordingsView(QWidget):
-    def __init__(self,directory,parent=None):
+    def __init__(self,directory,parent=None,language="en"):
         super().__init__(parent)
         self.directory=Path(directory)
+        self.translator=Translator(language)
         self.current=None
         self.fullscreen=None
         self.recording=False
@@ -61,8 +63,8 @@ class RecordingsView(QWidget):
         row=QHBoxLayout()
         self.folder=QLabel(str(self.directory))
         self.folder.setWordWrap(True)
-        refresh=QPushButton("Обновить")
-        open_folder=QPushButton("Открыть папку")
+        refresh=QPushButton(self.t("common.refresh"))
+        open_folder=QPushButton(self.t("common.open_folder"))
         row.addWidget(self.folder,1)
         row.addWidget(refresh)
         row.addWidget(open_folder)
@@ -72,11 +74,11 @@ class RecordingsView(QWidget):
         self.library=QWidget()
         library_layout=QVBoxLayout(self.library)
         self.search=QLineEdit()
-        self.search.setPlaceholderText("Поиск по имени")
+        self.search.setPlaceholderText(self.t("player.search"))
         self.sort=QComboBox()
-        self.sort.addItems(["Новые сначала","Старые сначала","По имени"])
+        self.sort.addItems([self.t("player.newest"),self.t("player.oldest"),self.t("player.by_name")])
         self.list=QTreeWidget()
-        self.list.setHeaderLabels(["Запись","Дата","МБ"])
+        self.list.setHeaderLabels([self.t("player.recording"),self.t("player.date"),self.t("player.mb")])
         self.list.setRootIsDecorated(False)
         self.list.setColumnWidth(0,210)
         library_layout.addWidget(self.search)
@@ -94,7 +96,7 @@ class RecordingsView(QWidget):
         self.screen.addWidget(self.paused_frame)
         self.screen.setCurrentIndex(1)
         self.pane_layout.addWidget(self.screen,1)
-        self.info=QLabel("Выберите запись")
+        self.info=QLabel(self.t("player.select"))
         self.info.setWordWrap(True)
         self.pane_layout.addWidget(self.info)
         self.timeline=QSlider(Qt.Orientation.Horizontal)
@@ -105,25 +107,25 @@ class RecordingsView(QWidget):
         row=QHBoxLayout()
         self.previous=QPushButton()
         self.previous.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaSkipBackward))
-        self.previous.setToolTip("Предыдущая запись")
+        self.previous.setToolTip(self.t("player.previous"))
         self.play=QPushButton()
         self.play.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
-        self.play.setToolTip("Воспроизведение / пауза (Пробел)")
+        self.play.setToolTip(self.t("player.play_pause"))
         self.stop=QPushButton()
         self.stop.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaStop))
-        self.stop.setToolTip("Стоп: в начало")
+        self.stop.setToolTip(self.t("player.stop"))
         self.next=QPushButton()
         self.next.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaSkipForward))
-        self.next.setToolTip("Следующая запись")
-        back=QPushButton("−10 с")
-        forward=QPushButton("+10 с")
+        self.next.setToolTip(self.t("player.next"))
+        back=QPushButton(self.t("player.back"))
+        forward=QPushButton(self.t("player.forward"))
         for button in (self.previous,back,self.play,self.stop,forward,self.next):
             row.addWidget(button)
         self.pane_layout.addLayout(row)
         row=QHBoxLayout()
-        self.mute=QPushButton("Звук")
+        self.mute=QPushButton(self.t("player.sound"))
         self.mute.setCheckable(True)
-        self.mute.setToolTip("Отключить звук")
+        self.mute.setToolTip(self.t("player.mute"))
         self.volume=QSlider(Qt.Orientation.Horizontal)
         self.volume.setRange(0,100)
         self.volume.setValue(70)
@@ -136,11 +138,11 @@ class RecordingsView(QWidget):
         row.addWidget(self.speed)
         self.pane_layout.addLayout(row)
         row=QHBoxLayout()
-        expand=QPushButton("Развернуть")
+        expand=QPushButton(self.t("player.expand"))
         expand.setCheckable(True)
-        full=QPushButton("Полный экран")
-        snapshot=QPushButton("Снимок кадра…")
-        self.delete=QPushButton("Удалить запись")
+        full=QPushButton(self.t("player.fullscreen"))
+        snapshot=QPushButton(self.t("player.snapshot"))
+        self.delete=QPushButton(self.t("player.delete"))
         self.delete.setToolTip("Удалить выбранный файл записи")
         self.delete.setEnabled(False)
         row.addWidget(expand)
@@ -189,6 +191,9 @@ class RecordingsView(QWidget):
             shortcut=QShortcut(QKeySequence(key),self.pane)
             shortcut.activated.connect(callback)
         self.refresh()
+    def t(self,key):
+        return self.translator.tr(key)
+
     def refresh(self,select=None):
         selected=str(Path(select).resolve()) if select else (str(self.current) if self.current else None)
         self.list.blockSignals(True)
@@ -211,7 +216,7 @@ class RecordingsView(QWidget):
                 if str(path)==selected:
                     self.list.setCurrentItem(item)
         except OSError as exc:
-            self.info.setText("Папка записей недоступна: "+str(exc))
+            self.info.setText(self.t("player.folder_error") + " "+str(exc))
         finally:
             self.list.blockSignals(False)
         self.filter()
@@ -224,7 +229,7 @@ class RecordingsView(QWidget):
             self.frame_image=None
             self.first_image=None
             self.paused_frame.update()
-            self.info.setText("Выбранный файл удалён или перемещён.")
+            self.info.setText(self.t("player.file_missing"))
     def filter(self,*_):
         query=self.search.text().casefold()
         for index in range(self.list.topLevelItemCount()):
@@ -302,7 +307,7 @@ class RecordingsView(QWidget):
     def set_muted(self,value):
         self.user_muted=value
         self.audio.setMuted(value or self.priming)
-        self.mute.setText("Без звука" if value else "Звук")
+        self.mute.setText(self.t("player.muted") if value else self.t("player.sound"))
     def duration_changed(self,value):
         self.timeline.setRange(0,min(value,2147483647))
         self.position_changed(self.player.position())
@@ -326,7 +331,7 @@ class RecordingsView(QWidget):
     def media_error(self,*_):
         self.priming=False
         self.wanted_play=False
-        self.info.setText("Не удалось воспроизвести: "+self.player.errorString())
+        self.info.setText(self.t("player.playback_error") + " "+self.player.errorString())
         log.error("Playback failed: %s",self.player.errorString())
     def toggle_fullscreen(self):
         if self.fullscreen:
@@ -344,11 +349,11 @@ class RecordingsView(QWidget):
             dialog.deleteLater()
     def snapshot(self):
         if self.frame_image is None or self.frame_image.isNull():
-            self.info.setText("Нет кадра для сохранения.")
+            self.info.setText(self.t("player.no_frame"))
             return
         path,_=QFileDialog.getSaveFileName(self,"Снимок кадра",str(self.directory/"frame.png"),"PNG (*.png)")
         if path and not self.frame_image.save(path,"PNG"):
-            self.info.setText("Не удалось сохранить кадр.")
+            self.info.setText(self.t("player.snapshot_error"))
     def delete_current(self):
         if self.recording or not self.current:
             return
@@ -358,7 +363,7 @@ class RecordingsView(QWidget):
             return
         answer=QMessageBox.question(
             self,
-            "Удалить запись",
+            self.t("player.delete"),
             f"Удалить запись «{path.name}»?\n\nФайл будет удалён без возможности восстановления.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
@@ -370,7 +375,7 @@ class RecordingsView(QWidget):
         try:
             path.unlink()
         except OSError as exc:
-            self.info.setText("Не удалось удалить запись: "+str(exc))
+            self.info.setText(self.t("player.delete_error") + " "+str(exc))
             log.error("Failed to delete recording %s: %s",path,exc)
             return
         self.current=None
@@ -378,10 +383,11 @@ class RecordingsView(QWidget):
         self.frame_image=None
         self.first_image=None
         self.paused_frame.update()
-        self.info.setText("Запись удалена.")
+        self.info.setText(self.t("player.deleted"))
         self.refresh()
     def set_directory(self,directory):
         self.directory=Path(directory)
+        self.translator=Translator(language)
         self.folder.setText(str(self.directory))
         self.stop_playback()
         self.player.setSource(QUrl())
@@ -389,7 +395,7 @@ class RecordingsView(QWidget):
         self.frame_image=None
         self.first_image=None
         self.paused_frame.update()
-        self.info.setText("Выберите запись")
+        self.info.setText(self.t("player.select"))
         self.refresh()
     def set_recording(self,busy):
         previous=self.recording
