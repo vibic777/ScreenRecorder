@@ -51,7 +51,7 @@ class SourceController:
     def region_description(self):
         region = self.settings.region
         if self.current_source() and self.settings.source_mode == "region":
-            return f"Область: {region['width']} × {region['height']} — X={region['left']}, Y={region['top']}"
+            return self.translator.tr("source.region.selected", width=region["width"], height=region["height"], left=region["left"], top=region["top"])
         return self.translator.tr("source.region.none")
 
     def refresh_sources(self):
@@ -106,8 +106,6 @@ class SourceController:
                 target = target.with_name(target.name + "-" + datetime.now().strftime("%Y%m%d-%H%M%S-%f"))
             shutil.copytree(source, target)
             QMessageBox.information(self.window, self.translator.tr("extension.saved"),
-                f"Папка: {target}\n\nОткройте chrome://extensions или edge://extensions. "
-                "Включите режим разработчика, нажмите «Загрузить распакованное» и выберите эту папку.\n"
-                "Затем начните сеанс вкладки в ScreenRec, скопируйте код и нажмите значок расширения в нужной вкладке.")
+                self.translator.tr("extension.saved.detail", folder=target)
         except OSError as exc:
             self.error(str(exc))
