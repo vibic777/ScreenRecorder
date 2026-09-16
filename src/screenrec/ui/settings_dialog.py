@@ -48,6 +48,13 @@ class SettingsDialog(QDialog):
         self.refresh.clicked.connect(self.refresh_devices)
         self.audio_mode.currentIndexChanged.connect(self.update_audio)
         self.fill_devices([], settings.microphone_id, settings.system_device_id)
+        self.file_format.setToolTip(self.t("tip.format"))
+        self.quality.setToolTip(self.t("tip.video_quality"))
+        self.fps.setToolTip(self.t("tip.fps"))
+        self.audio_mode.setToolTip(self.t("tip.audio_mode"))
+        self.microphone.setToolTip(self.t("tip.microphone"))
+        self.system_device.setToolTip(self.t("tip.system_audio"))
+        self.bitrate.setToolTip(self.t("tip.audio_bitrate"))
         self.update_audio()
 
     def t(self,key):
