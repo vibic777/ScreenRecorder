@@ -5,6 +5,14 @@ import multiprocessing
 from pathlib import Path
 
 
+def profile_path_from_args(argv):
+    if "--profile" not in argv:
+        return None
+    index = argv.index("--profile")
+    if index + 1 >= len(argv) or argv[index + 1].startswith("--"):
+        raise SystemExit("Параметр --profile требует путь к файлу профиля")
+    return Path(argv[index + 1]).expanduser()
+
 def main():
     multiprocessing.freeze_support()
     if not getattr(sys, "frozen", False) and sys.prefix == sys.base_prefix:
