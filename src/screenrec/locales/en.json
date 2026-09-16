@@ -194,5 +194,6 @@
   "tip.copy_pairing": "Copy the connection code to the clipboard.",
   "tip.player_volume": "Adjust playback volume.",
   "tip.player_speed": "Change playback speed.",
-  "tip.extension": "Export the local extension for Chrome or Edge."
+  "tip.extension": "Export the local extension for Chrome or Edge.",
+  "command.confirm_region": "Confirm selected region"
 }
