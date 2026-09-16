@@ -2,12 +2,20 @@ import signal
 import sys
 import traceback
 import multiprocessing
+from pathlib import Path
 
 
 def main():
     multiprocessing.freeze_support()
     if not getattr(sys, "frozen", False) and sys.prefix == sys.base_prefix:
         raise SystemExit("Запустите ScreenRec внутри .venv: python -m screenrec.main")
+    if "--profile" in sys.argv:
+        index = sys.argv.index("--profile")
+        if index + 1 >= len(sys.argv) or sys.argv[index + 1].startswith("--"):
+            raise SystemExit("Параметр --profile требует путь к файлу профиля")
+        profile_path = Path(sys.argv[index + 1]).expanduser()
+    else:
+        profile_path = None
     if "--self-test" in sys.argv:
         from .selftest import run
         return run(sys.argv[sys.argv.index("--self-test") + 1:])
@@ -17,7 +25,7 @@ def main():
     application = QApplication(sys.argv)
     application.setApplicationName("ScreenRec")
     try:
-        controller = ScreenRecApp(application)
+        controller = ScreenRecApp(application, profile_path=profile_path)
     except Exception as exc:
         from .logger.logger import get_logger, shutdown as close_log
         from PySide6.QtWidgets import QMessageBox
