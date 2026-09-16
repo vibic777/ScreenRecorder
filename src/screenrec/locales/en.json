@@ -195,5 +195,12 @@
   "tip.player_volume": "Adjust playback volume.",
   "tip.player_speed": "Change playback speed.",
   "tip.extension": "Export the local extension for Chrome or Edge.",
-  "command.confirm_region": "Confirm selected region"
+  "command.confirm_region": "Confirm selected region",
+  "tip.filename_time": "Adds the recording start time to the filename.",
+  "tip.overlay_kind": "Choose whether to edit the image or text overlay.",
+  "tip.overlay_size": "Sets the text size relative to the video frame height.",
+  "tip.filename_prefix": "Sets the base text used at the start of each recording filename.",
+  "tip.overlay_element": "Enables the selected overlay element in new recordings.",
+  "tip.filename_date": "Adds the recording date to the filename.",
+  "tip.filename_uuid": "Adds a unique identifier to prevent filename collisions."
 }

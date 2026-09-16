@@ -22,6 +22,10 @@ class FilenameDialog(QDialog):
         self.time.setChecked(settings.filename_time)
         self.uuid=QCheckBox(self.t("filename.add_uuid"))
         self.uuid.setChecked(settings.filename_uuid)
+        self.prefix.setToolTip(self.t("tip.filename_prefix"))
+        self.date.setToolTip(self.t("tip.filename_date"))
+        self.time.setToolTip(self.t("tip.filename_time"))
+        self.uuid.setToolTip(self.t("tip.filename_uuid"))
         self.date_format=QComboBox()
         for key,(label,_) in DATE_FORMATS.items():
             self.date_format.addItem(label,key)
