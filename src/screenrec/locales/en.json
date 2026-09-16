@@ -216,5 +216,12 @@
   "filename.invalid_prefix": "Invalid characters were replaced; prefix: {prefix}",
   "filename.collision_suffix": "UUID is disabled; duplicate names receive a numeric suffix.",
   "filename.empty": "(empty)",
-  "filename.uuid_example": "The UUID in this preview is illustrative; a new one is generated for each recording."
+  "filename.uuid_example": "The UUID in this preview is illustrative; a new one is generated for each recording.",
+  "overlay.text_color_title": "Text color",
+  "tip.player_delete": "Delete the selected recording after confirmation.",
+  "overlay.choose_image_title": "Choose overlay image",
+  "player.snapshot_filter": "PNG images (*.png)",
+  "overlay.image_filter": "Images (*.png *.jpg *.jpeg *.bmp *.webp)",
+  "player.delete_confirm": "Delete recording “{name}”?\\n\\nThe file will be permanently deleted.",
+  "player.snapshot_title": "Save snapshot"
 }
