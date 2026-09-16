@@ -51,6 +51,10 @@ class ScreenRecApp(SourceController, QObject):
         menu.addSeparator()
         menu.addAction(self.exit_action)
         settings_menu = self.window.menuBar().addMenu(self.translator.tr("menu.settings", fallback="Settings"))
+        help_menu = self.window.menuBar().addMenu(self.translator.tr("menu.help", fallback="Help"))
+        help_action = help_menu.addAction(self.translator.tr("help.about"))
+        help_action.triggered.connect(self.show_help)
+
         self.logging_action = settings_menu.addAction(self.translator.tr("settings.logging"))
         self.logging_action.triggered.connect(self.configure_logging)
         self.configure_action = settings_menu.addAction(self.translator.tr("settings.recording"))
@@ -113,6 +117,9 @@ class ScreenRecApp(SourceController, QObject):
         self.initialize_sources()
         if log_warning:
             QTimer.singleShot(0, lambda: QMessageBox.warning(self.window,self.translator.tr("logging.title"),log_warning))
+
+    def show_help(self):
+        QMessageBox.information(self.window, self.translator.tr("help.title"), self.translator.tr("help.description"))
 
     def set_language(self, action):
         language = action.data()
