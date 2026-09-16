@@ -23,6 +23,6 @@ class Translator:
         self.language = language if language in SUPPORTED_LANGUAGES else DEFAULT_LANGUAGE
         self._messages = self._load(self.language)
 
-    def tr(self, key, **values):
-        text = self._messages.get(key, key)
+    def tr(self, key, fallback=None, **values):
+        text = self._messages.get(key, fallback if fallback is not None else key)
         return text.format(**values) if values else text
