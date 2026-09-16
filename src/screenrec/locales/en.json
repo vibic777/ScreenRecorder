@@ -32,5 +32,10 @@
   "action.exit": "Exit",
   "settings.logging": "Logging…",
   "settings.notifications": "Notifications",
-  "settings.theme": "Theme"
+  "settings.theme": "Theme",
+  "source.region.none": "No region selected.",
+  "source.windows.none": "No suitable windows found. Open the desired application and refresh the list.",
+  "source.tab.wait": "Waiting for tab: copy the code and connect the desired tab using the extension.",
+  "extension.choose_folder": "Where to save the local extension",
+  "extension.saved": "Extension saved"
 }

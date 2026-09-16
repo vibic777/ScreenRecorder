@@ -32,5 +32,10 @@
   "action.exit": "Выход",
   "settings.logging": "Логирование…",
   "settings.notifications": "Уведомления",
-  "settings.theme": "Тема"
+  "settings.theme": "Тема",
+  "source.region.none": "Область ещё не выбрана.",
+  "source.windows.none": "Подходящие окна не найдены. Откройте нужную программу и обновите список.",
+  "source.tab.wait": "Ожидание вкладки: скопируйте код и подключите нужную вкладку через расширение.",
+  "extension.choose_folder": "Куда сохранить локальное расширение",
+  "extension.saved": "Расширение сохранено"
 }

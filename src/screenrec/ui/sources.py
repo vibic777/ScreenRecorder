@@ -52,7 +52,7 @@ class SourceController:
         region = self.settings.region
         if self.current_source() and self.settings.source_mode == "region":
             return f"Область: {region['width']} × {region['height']} — X={region['left']}, Y={region['top']}"
-        return "Область ещё не выбрана."
+        return self.translator.tr("source.region.none")
 
     def refresh_sources(self):
         if self.window.source_mode.currentData() == "window":
@@ -67,7 +67,7 @@ class SourceController:
             for item in windows():
                 self.window.window_list.addItem(f"{item['title']}  (PID {item['pid']})", item)
             if not self.window.window_list.count():
-                self.window.status.setText("Подходящие окна не найдены. Откройте нужную программу и обновите список.")
+                self.window.status.setText(self.translator.tr("source.windows.none"))
         except Exception as exc:
             self.window.status.setText(str(exc))
         self.set_busy(bool(self.worker))
@@ -93,10 +93,10 @@ class SourceController:
 
     def show_pairing(self, code):
         self.window.pairing.setText(code)
-        self.window.status.setText("Ожидание вкладки: скопируйте код и подключите нужную вкладку через расширение.")
+        self.window.status.setText(self.translator.tr("source.tab.wait"))
 
     def export_extension(self):
-        directory = QFileDialog.getExistingDirectory(self.window, "Куда сохранить локальное расширение")
+        directory = QFileDialog.getExistingDirectory(self.window, self.translator.tr("extension.choose_folder"))
         if not directory:
             return
         try:
@@ -105,7 +105,7 @@ class SourceController:
             if target.exists():
                 target = target.with_name(target.name + "-" + datetime.now().strftime("%Y%m%d-%H%M%S-%f"))
             shutil.copytree(source, target)
-            QMessageBox.information(self.window, "Расширение сохранено",
+            QMessageBox.information(self.window, self.translator.tr("extension.saved"),
                 f"Папка: {target}\n\nОткройте chrome://extensions или edge://extensions. "
                 "Включите режим разработчика, нажмите «Загрузить распакованное» и выберите эту папку.\n"
                 "Затем начните сеанс вкладки в ScreenRec, скопируйте код и нажмите значок расширения в нужной вкладке.")
