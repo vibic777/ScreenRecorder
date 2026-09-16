@@ -12,6 +12,7 @@ THEMES = {
         ("green", "Green", "#edf6f0", "#172d22", "#237a49"),
         ("blue", "Blue", "#eef4fc", "#182c46", "#2469b0"),
         ("orange", "Orange", "#fff3e8", "#4a2410", "#d96b00"),
+        ("pink", "Pink", "#fff0f5", "#4a1829", "#c43d70"),
         ("gray", "Gray", "#eceef1", "#242830", "#555e6c"),
         ("black", "Black", "#15171b", "#f0f2f6", "#7c99bc"),
     )
