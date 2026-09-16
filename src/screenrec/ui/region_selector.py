@@ -94,7 +94,7 @@ class RegionSelector(QDialog):
     def selected_region(self):
         return physical_region(self.selection, self.width(), self.height(), self.monitor, self.language)
 
-def screen_for_monitor(monitor, index):
+def screen_for_monitor(monitor, index, language="en"):
     import platform
     from PySide6.QtGui import QGuiApplication
     screens = QGuiApplication.screens()
@@ -127,4 +127,4 @@ def screen_for_monitor(monitor, index):
         geometry = screen.geometry()
         if (geometry.x(),geometry.y(),round(geometry.width()*screen.devicePixelRatio()),round(geometry.height()*screen.devicePixelRatio())) == (monitor["left"],monitor["top"],monitor["width"],monitor["height"]):
             return screen
-    raise RuntimeError("Не удалось сопоставить монитор с экраном Qt. Обновите список мониторов.")
+    raise RuntimeError(Translator(language).tr("region.monitor_error"))
