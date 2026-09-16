@@ -2,6 +2,7 @@ import signal
 import sys
 import traceback
 import multiprocessing
+import platform
 from pathlib import Path
 
 
@@ -12,6 +13,23 @@ def profile_path_from_args(argv):
     if index + 1 >= len(argv) or argv[index + 1].startswith("--"):
         raise SystemExit("Параметр --profile требует путь к файлу профиля")
     return Path(argv[index + 1]).expanduser()
+
+def qt_runtime_error(exc):
+    return (f"ScreenRec cannot start because Qt/PySide6 could not be loaded.\\n"
+            f"Windows: {platform.platform()} ({platform.machine()})\\n"
+            f"Cause: {exc}\\n\\n"
+            "Use the supported 64-bit Windows 10 1809+ or Windows 11 build, "
+            "and install the Microsoft Visual C++ runtime if required.")
+
+def show_runtime_error(message):
+    if platform.system() == "Windows":
+        try:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(0, message, "ScreenRec", 0x10)
+            return
+        except Exception:
+            pass
+    print(message, file=sys.stderr)
 
 def main():
     multiprocessing.freeze_support()
