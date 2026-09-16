@@ -7,6 +7,7 @@ from PySide6.QtGui import QActionGroup, QAction, QDesktopServices, QIcon
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QSystemTrayIcon
 
 from .config.settings import Settings
+from .config.profiles import save_profile
 from .localization import Translator, SUPPORTED_LANGUAGES
 from .recorder.screen import monitors
 from .recorder.worker import RecordingWorker
@@ -59,6 +60,10 @@ class ScreenRecApp(SourceController, QObject):
         help_menu = self.window.menuBar().addMenu(self.translator.tr("menu.help", fallback="Help"))
         help_action = help_menu.addAction(self.translator.tr("help.about"))
         help_action.triggered.connect(self.show_help)
+
+        profiles_menu = settings_menu.addMenu(self.translator.tr("profiles.menu"))
+        export_profile_action = profiles_menu.addAction(self.translator.tr("profiles.export"))
+        export_profile_action.triggered.connect(self.export_profile)
 
         self.logging_action = settings_menu.addAction(self.translator.tr("settings.logging"))
         self.logging_action.triggered.connect(self.configure_logging)
@@ -146,6 +151,22 @@ class ScreenRecApp(SourceController, QObject):
         elif path is not None and warning:
             self.settings.log_path = str(path)
         return warning
+
+    def export_profile(self):
+        path, _ = QFileDialog.getSaveFileName(
+            self.window, self.translator.tr("profiles.export_title"),
+            "ScreenRec-profile.json", self.translator.tr("profiles.file_filter"),
+        )
+        if not path:
+            return
+        try:
+            save_profile(Path(path), self.settings)
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self.window, self.translator.tr("profiles.error_title"),
+                                self.translator.tr("profiles.export_error", error=exc))
+            return
+        QMessageBox.information(self.window, self.translator.tr("profiles.export_title"),
+                                self.translator.tr("profiles.exported", path=path))
 
     def configure_logging(self):
         from .ui.logging_dialog import LoggingDialog
