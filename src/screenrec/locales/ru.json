@@ -212,5 +212,9 @@
   "folder.recordings": "Папка записей",
   "source.monitor_item": "Монитор {index}: {width} × {height} ({left}, {top})",
   "status.tab_recording": "Записывается:",
-  "status.saved": "Сохранено: {path}"
+  "status.saved": "Сохранено: {path}",
+  "filename.invalid_prefix": "Недопустимые символы заменены; префикс: {prefix}",
+  "filename.collision_suffix": "UUID отключён; совпадения имён разрешаются числовым суффиксом.",
+  "filename.empty": "(пусто)",
+  "filename.uuid_example": "UUID в примере условный; при каждой записи создаётся новый."
 }
