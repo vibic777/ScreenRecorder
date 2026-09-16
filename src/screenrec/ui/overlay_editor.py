@@ -217,7 +217,7 @@ class OverlayEditor(QDialog):
         self.sync_geometry()
         self.canvas.update()
     def browse(self):
-        path,_=QFileDialog.getOpenFileName(self,self.t("overlay.image"),"","Изображения (*.png *.jpg *.jpeg *.bmp *.webp)")
+        path,_=QFileDialog.getOpenFileName(self,self.t("overlay.choose_image_title"),"",self.t("overlay.image_filter"))
         if path:
             try:
                 image=load_image(path)
@@ -229,7 +229,7 @@ class OverlayEditor(QDialog):
             except Exception as exc:
                 QMessageBox.warning(self,self.t("overlay.image"),str(exc))
     def choose_color(self):
-        color=QColorDialog.getColor(QColor(self.template["text"]["color"]),self,"Цвет текста")
+        color=QColorDialog.getColor(QColor(self.template["text"]["color"]),self,self.t("overlay.text_color_title"))
         if color.isValid():
             self.template["text"]["color"]=color.name()
             self.canvas.update()
@@ -255,7 +255,7 @@ class OverlayEditor(QDialog):
                 self.names.addItem(name)
             self.note.setText(self.t("overlay.saved"))
         except OSError as exc:
-            QMessageBox.warning(self,"Шаблон",str(exc))
+            QMessageBox.warning(self,self.t("overlay.template"),str(exc))
     def valid(self):
         if self.template["image"]["enabled"]:
             try:

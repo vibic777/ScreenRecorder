@@ -144,7 +144,7 @@ class RecordingsView(QWidget):
         full=QPushButton(self.t("player.fullscreen"))
         snapshot=QPushButton(self.t("player.snapshot"))
         self.delete=QPushButton(self.t("player.delete"))
-        self.delete.setToolTip("Удалить выбранный файл записи")
+        self.delete.setToolTip(self.t("tip.player_delete"))
         self.delete.setEnabled(False)
         row.addWidget(expand)
         row.addWidget(full)
@@ -357,7 +357,7 @@ class RecordingsView(QWidget):
         if self.frame_image is None or self.frame_image.isNull():
             self.info.setText(self.t("player.no_frame"))
             return
-        path,_=QFileDialog.getSaveFileName(self,"Снимок кадра",str(self.directory/"frame.png"),"PNG (*.png)")
+        path,_=QFileDialog.getSaveFileName(self,self.t("player.snapshot_title"),str(self.directory/"frame.png"),self.t("player.snapshot_filter"))
         if path and not self.frame_image.save(path,"PNG"):
             self.info.setText(self.t("player.snapshot_error"))
     def delete_current(self):

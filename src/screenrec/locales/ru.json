@@ -216,5 +216,12 @@
   "filename.invalid_prefix": "Недопустимые символы заменены; префикс: {prefix}",
   "filename.collision_suffix": "UUID отключён; совпадения имён разрешаются числовым суффиксом.",
   "filename.empty": "(пусто)",
-  "filename.uuid_example": "UUID в примере условный; при каждой записи создаётся новый."
+  "filename.uuid_example": "UUID в примере условный; при каждой записи создаётся новый.",
+  "overlay.text_color_title": "Цвет текста",
+  "tip.player_delete": "Удалить выбранную запись после подтверждения.",
+  "overlay.choose_image_title": "Выбрать картинку для наложения",
+  "player.snapshot_filter": "Изображения PNG (*.png)",
+  "overlay.image_filter": "Изображения (*.png *.jpg *.jpeg *.bmp *.webp)",
+  "player.delete_confirm": "Удалить запись «{name}»?\\n\\nФайл будет удалён без возможности восстановления.",
+  "player.snapshot_title": "Снимок кадра"
 }
