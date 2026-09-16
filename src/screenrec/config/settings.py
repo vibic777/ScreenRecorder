@@ -58,7 +58,7 @@ class Settings:
                     setattr(settings, key, default)
             if settings.language not in ("en", "ru"):
                 settings.language = "en"
-            if settings.theme not in ("green", "blue", "gray", "black"):
+            if settings.theme not in ("green", "blue", "orange", "pink", "purple", "gray", "black"):
                 settings.theme = "gray"
             if settings.source_mode not in ("monitor", "region", "window", "tab"):
                 settings.source_mode = "monitor"
