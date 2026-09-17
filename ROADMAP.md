@@ -26,7 +26,7 @@
 #### Две Windows-сборки
 
 - [ ] Проверить совместимую legacy-ветку Qt/PySide6 для Windows 7/8/8.1.
-- [ ] Зафиксировать отдельные Python, PySide6, PyInstaller и зависимости для `legacy` и `modern`.
+- [x] Зафиксировать отдельные Python, PySide6, PyInstaller и зависимости для `legacy` и `modern`.
 - [ ] Собрать `ScreenRec-legacy.exe` для Windows 7/8/8.1 и `ScreenRec-modern.exe` для Windows 10/11.
 - [ ] Проверить запись, звук, источники, браузерную вкладку, проигрыватель и профили в обеих сборках.
 - [ ] Если legacy-ветка непригодна, окончательно оставить поддержку Windows 10/11.
