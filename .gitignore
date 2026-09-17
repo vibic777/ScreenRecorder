@@ -9,3 +9,41 @@ dist/
 releases/
 
 *.log.[123]
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.secret
+*.secrets
+*credentials*
+*credential*
+*password*
+*token*
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+id_rsa
+id_rsa.*
+
+# Local application state and diagnostics
+settings.json
+instance.lock
+*.sqlite
+*.sqlite3
+*.db
+*.dmp
+crash-reports/
+logs/
+
+# Temporary and editor files
+*.tmp
+*.temp
+*.bak
+*.swp
+.DS_Store
+Thumbs.db

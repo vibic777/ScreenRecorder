@@ -101,7 +101,7 @@ def run(arguments):
             dialog.deleteLater()
             from .ui.logging_dialog import LoggingDialog
             logging_dialog = LoggingDialog(settings,controller.window)
-            assert not logging_dialog.enabled.isChecked()
+            assert logging_dialog.enabled.isChecked()
             logging_dialog.grab().save(str(directory / "logging-editor.png"))
             logging_dialog.deleteLater()
             controller.timer.stop()

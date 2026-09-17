@@ -13,6 +13,18 @@ from screenrec.ui.logging_dialog import LoggingDialog
 class LoggingTests(TestCase):
     def tearDown(self):
         configure(False)
+    def test_all_levels_can_be_enabled_at_startup(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "startup.log"
+            configure(True, str(path), list(LEVELS))
+            log = get_logger("startup")
+            for name, number in LEVELS.items():
+                log.logger.log(number, "startup-" + name)
+            text = path.read_text(encoding="utf-8")
+            for name in LEVELS:
+                self.assertIn("startup-" + name, text)
+            shutdown()
+
     def test_disabled_and_exact_level_filter(self):
         with TemporaryDirectory() as directory:
             path=Path(directory)/"test.log"
@@ -37,6 +49,15 @@ class LoggingTests(TestCase):
             self.assertEqual(path.read_bytes(),previous)
             self.assertIn(b"fatal-on",previous)
             self.assertIn(b"trace-on",previous)
+    def test_shutdown_flushes_final_event(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "final.log"
+            configure(True, str(path), ["INFO"])
+            get_logger("shutdown").info("final shutdown event")
+            shutdown()
+            self.assertIsNone(hub.file)
+            self.assertIn("final shutdown event", path.read_text(encoding="utf-8"))
+
     def test_rotation_threads_and_runtime_write_failure(self):
         with TemporaryDirectory() as directory:
             path=Path(directory)/"test.log"

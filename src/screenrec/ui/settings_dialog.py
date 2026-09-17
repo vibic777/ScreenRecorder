@@ -1,6 +1,6 @@
 from dataclasses import replace
 from PySide6.QtWidgets import (QDialog, QFormLayout, QComboBox, QDialogButtonBox,
-                              QLabel, QPushButton)
+                              QLabel, QPushButton, QCheckBox)
 from screenrec.config.recording import FORMATS, QUALITIES, AUDIO_MODES
 from screenrec.recorder.audio import devices
 from screenrec.localization import Translator
@@ -15,12 +15,14 @@ class SettingsDialog(QDialog):
         self.setMinimumWidth(510)
         form = QFormLayout(self)
         self.file_format = self.combo(FORMATS, settings.file_format)
-        self.quality = self.combo(QUALITIES, settings.quality)
+        self.quality = self.combo({key: self.t(f"settings.quality.{key}") for key in QUALITIES}, settings.quality)
         self.fps = self.combo({i: str(i) for i in (15, 24, 30, 60)}, settings.fps)
-        self.audio_mode = self.combo(AUDIO_MODES, settings.audio_mode)
+        self.audio_mode = self.combo({key: self.t(f"settings.audio_mode.{key}") for key in AUDIO_MODES}, settings.audio_mode)
         self.microphone = QComboBox()
         self.system_device = QComboBox()
         self.bitrate = self.combo({i: self.t("settings.bitrate").format(value=i) for i in (96, 128, 192, 256, 320)}, settings.audio_bitrate)
+        self.allow_multiple_instances = QCheckBox(self.t("app.allow_multiple"))
+        self.allow_multiple_instances.setChecked(settings.allow_multiple_instances)
         form.addRow(self.t("settings.format"), self.file_format)
         form.addRow(self.t("settings.video_quality"), self.quality)
         form.addRow(self.t("settings.fps"), self.fps)
@@ -28,6 +30,7 @@ class SettingsDialog(QDialog):
         form.addRow(self.t("settings.microphone"), self.microphone)
         form.addRow(self.t("settings.system_audio"), self.system_device)
         form.addRow(self.t("settings.audio_quality"), self.bitrate)
+        form.addRow(self.t("settings.single_instance"), self.allow_multiple_instances)
         filename_button = QPushButton(self.t("settings.filename"))
         filename_button.clicked.connect(self.configure_filename)
         form.addRow(filename_button)
@@ -104,4 +107,5 @@ class SettingsDialog(QDialog):
         return replace(self.settings, file_format=self.file_format.currentData(), quality=self.quality.currentData(),
                        fps=self.fps.currentData(), audio_mode=self.audio_mode.currentData(),
                        microphone_id=self.microphone.currentData(), system_device_id=self.system_device.currentData(),
-                       audio_bitrate=self.bitrate.currentData())
+                       audio_bitrate=self.bitrate.currentData(), allow_multiple_instances=self.allow_multiple_instances.isChecked())
+

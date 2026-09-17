@@ -68,6 +68,15 @@ class RecordingOptionsTests(unittest.TestCase):
         self.assertEqual(settings.audio_mode, "none")
         self.assertEqual(dialog.result_settings().audio_mode, "both")
 
+    def test_single_instance_setting_is_in_configurator(self):
+        settings = Settings()
+        dialog = SettingsDialog(settings)
+        self.assertFalse(settings.allow_multiple_instances)
+        self.assertFalse(dialog.allow_multiple_instances.isChecked())
+        dialog.allow_multiple_instances.setChecked(True)
+        self.assertTrue(dialog.result_settings().allow_multiple_instances)
+        dialog.deleteLater()
+
     def test_invalid_persisted_options_fall_back(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(Settings, "path", return_value=Path(directory) / "settings.json"):
             Settings.path().write_text('{"file_format":"exe","quality":"invalid","audio_mode":"bad","audio_bitrate":-1}')

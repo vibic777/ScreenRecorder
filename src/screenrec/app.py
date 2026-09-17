@@ -1,11 +1,12 @@
 import time
 import json
+from html import escape
 from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QTimer, QUrl
+from PySide6.QtCore import QObject, QTimer, QUrl, Qt
 from PySide6.QtGui import QActionGroup, QAction, QDesktopServices, QIcon
-from PySide6.QtWidgets import QFileDialog, QMessageBox, QSystemTrayIcon
+from PySide6.QtWidgets import QFileDialog, QMessageBox, QSystemTrayIcon, QDialog, QVBoxLayout, QTextBrowser, QDialogButtonBox
 
 from .config.settings import Settings
 from .config.profiles import save_profile, load_profile, load_default_profile
@@ -19,7 +20,7 @@ from .config.recording import FORMATS, QUALITIES, AUDIO_MODES
 from .config.commands import COMMANDS, commands_for
 from .ui.sources import SourceController
 from .ui.themes.theme_manager import THEMES, apply_theme
-from .logger.logger import get_logger, configure as configure_log, hub, shutdown as close_log
+from .logger.logger import get_logger, configure as configure_log, hub, shutdown as close_log, LEVELS
 log = get_logger(__name__)
 
 
@@ -29,6 +30,9 @@ class ScreenRecApp(SourceController, QObject):
         self.application = application
         self.settings = load_profile(profile_path) if profile_path else (load_default_profile() or Settings.load())
         self.translator = Translator(self.settings.language)
+        # Temporary debug mode: keep every level enabled during active diagnostics.
+        self.settings.logging_enabled = True
+        self.settings.log_levels = list(LEVELS)
         log_warning = self.apply_logging()
         log.info("Application started")
         self.worker = None
@@ -51,7 +55,7 @@ class ScreenRecApp(SourceController, QObject):
         self.start_action.triggered.connect(self.start_recording)
         self.stop_action.triggered.connect(self.stop_recording)
         self.show_action.triggered.connect(self.show_window)
-        self.exit_action.triggered.connect(self.request_exit)
+        self.exit_action.triggered.connect(lambda: self.request_exit())
         menu = self.window.menuBar().addMenu(self.translator.tr("menu.file", fallback="File"))
         menu.addAction(self.start_action)
         menu.addAction(self.stop_action)
@@ -91,7 +95,7 @@ class ScreenRecApp(SourceController, QObject):
         self.language_group.setExclusive(True)
         self.language_actions = {}
         for key, label in SUPPORTED_LANGUAGES.items():
-            action = self.language_menu.addAction(label)
+            action = self.language_menu.addAction(self.translator.tr("language." + key))
             action.setCheckable(True)
             action.setData(key)
             action.setChecked(key == self.settings.language)
@@ -132,12 +136,30 @@ class ScreenRecApp(SourceController, QObject):
             QTimer.singleShot(0, lambda: QMessageBox.warning(self.window,self.translator.tr("logging.title"),log_warning))
 
     def show_help(self):
-        shortcuts = "\\n".join(f"{command.shortcut} — {self.translator.tr(command.label_key)}" for command in COMMANDS.values() if command.shortcut)
-        text = self.translator.tr("help.description") + "\\n\\n" + self.translator.tr("help.shortcuts") + "\\n" + shortcuts
-        QMessageBox.information(self.window, self.translator.tr("help.title"), text)
-
+        log.debug("Help requested; language=%s", self.settings.language)
+        shortcuts = "\n".join(f"{command.shortcut} — {self.translator.tr(command.label_key)}" for command in COMMANDS.values() if command.shortcut)
+        description = self.translator.tr("help.description").replace("/n", "\n").replace("\\n", "\n")
+        headings = ("RECORDING", "SOURCES", "AUDIO", "FORMATS", "OVERLAYS", "CATALOGUE", "TROUBLESHOOTING", "KEYBOARD SHORTCUTS", "HOW SETTINGS AFFECT THE RESULT", "ЗАПИСЬ", "ИСТОЧНИКИ", "ЗВУК", "ФОРМАТЫ", "НАЛОЖЕНИЯ", "КАТАЛОГ", "УСТРАНЕНИЕ ПРОБЛЕМ", "ГОРЯЧИЕ КЛАВИШИ", "КАК ПАРАМЕТРЫ ВЛИЯЮТ НА РЕЗУЛЬТАТ")
+        html = escape(description).replace("\n", "<br>")
+        for heading in headings:
+            html = html.replace(heading, f"<br><h3>{heading}</h3>")
+        html += "<br><h3>" + escape(self.translator.tr("help.shortcuts")) + "</h3>" + escape(shortcuts).replace("\n", "<br>")
+        dialog = QDialog(self.window)
+        dialog.setWindowTitle(self.translator.tr("help.title"))
+        dialog.resize(820, 620)
+        layout = QVBoxLayout(dialog)
+        browser = QTextBrowser(dialog)
+        browser.setOpenExternalLinks(False)
+        browser.setHtml(html)
+        layout.addWidget(browser)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close, parent=dialog)
+        buttons.rejected.connect(dialog.reject)
+        buttons.accepted.connect(dialog.accept)
+        layout.addWidget(buttons)
+        dialog.exec()
     def set_language(self, action):
         language = action.data()
+        log.info("Language change requested: %s", language)
         if language == self.settings.language:
             return
         self.settings.language = language
@@ -250,6 +272,7 @@ class ScreenRecApp(SourceController, QObject):
             self.save_settings()
 
     def set_theme(self, name, *, save=True):
+        log.info("Theme change requested: %s", name)
         name = name if name in THEMES else "gray"
         self.icon = apply_theme(self.application, self.window, self.tray, name)
         self.settings.theme = name
@@ -287,6 +310,7 @@ class ScreenRecApp(SourceController, QObject):
     def set_close_to_tray(self, value):
         self.settings.close_to_tray = value
         self.save_settings()
+
 
     def set_fps(self, value):
         self.settings.fps = int(value)
@@ -415,7 +439,7 @@ class ScreenRecApp(SourceController, QObject):
         self.tray.setToolTip(self.translator.tr("tray.ready"))
         self.set_busy(False)
         if self.exiting:
-            self.application.quit()
+            self.exit_application()
 
     def notify(self, title, text):
         if self.settings.notifications and self.tray.isVisible():
@@ -449,6 +473,11 @@ class ScreenRecApp(SourceController, QObject):
         else:
             self.request_exit()
 
+    def exit_application(self):
+        log.info("Application exit dispatched")
+        self.window.hide()
+        self.application.exit(0)
+
     def request_exit(self, checked=False, *, confirm=True):
         if self.exiting:
             return
@@ -465,7 +494,7 @@ class ScreenRecApp(SourceController, QObject):
         if self.worker:
             self.stop_recording()
         else:
-            self.application.quit()
+            self.exit_application()
 
     def cleanup(self):
         if self.worker and self.worker.isRunning():

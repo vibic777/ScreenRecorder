@@ -37,6 +37,7 @@ class Hub(logging.Handler):
     def stop(self):
         if self.file:
             try:
+                self.file.flush()
                 self.file.close()
             except OSError:
                 pass
