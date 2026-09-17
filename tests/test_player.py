@@ -112,8 +112,8 @@ class PlayerTests(unittest.TestCase):
                 bad=Path(directory)/"broken.mp4"
                 bad.write_bytes(b"invalid video")
                 view.load(bad)
-                self.wait_for(lambda:view.player.error()!=QMediaPlayer.Error.NoError and "Не удалось" in view.info.text())
-                self.assertIn("Не удалось",view.info.text())
+                self.wait_for(lambda:view.player.error()!=QMediaPlayer.Error.NoError and "Playback failed" in view.info.text())
+                self.assertIn("Playback failed",view.info.text())
             finally:
                 view.shutdown()
                 view.close()
