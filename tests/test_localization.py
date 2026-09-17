@@ -37,6 +37,13 @@ class LocalizationStartupTests(unittest.TestCase):
         self.assertEqual(window.start.text(), "Начать запись")
         self.assertEqual(window.source_mode.itemText(0), "Монитор")
 
+    def test_help_text_has_normalizable_line_breaks(self):
+        for language in ("en", "ru"):
+            text = Translator(language).tr("help.description")
+            normalized = text.replace("/n", "\n").replace("\\n", "\n")
+            self.assertGreater(normalized.count("\n"), 10)
+            self.assertNotIn("/n", normalized)
+
     def test_help_contains_localized_sections(self):
         english = Translator("en").tr("help.description")
         russian = Translator("ru").tr("help.description")
@@ -50,6 +57,20 @@ class LocalizationStartupTests(unittest.TestCase):
             translator = Translator(language)
             for command in COMMANDS.values():
                 self.assertNotEqual(translator.tr(command.label_key), command.label_key)
+    def test_menu_translations_are_complete(self):
+        russian = Translator("ru")
+        self.assertEqual(russian.tr("menu.file"), "Файл")
+        self.assertEqual(russian.tr("menu.settings"), "Настройки")
+        self.assertEqual(russian.tr("menu.help"), "Справка")
+        self.assertEqual(russian.tr("menu.language"), "Язык")
+        self.assertEqual(russian.tr("language.en"), "Английский")
+        self.assertEqual(russian.tr("language.ru"), "Русский")
+        english = Translator("en")
+        self.assertEqual(english.tr("menu.file"), "File")
+        self.assertEqual(english.tr("menu.settings"), "Settings")
+        self.assertEqual(english.tr("menu.help"), "Help")
+        self.assertEqual(english.tr("menu.language"), "Language")
+
     def test_translation_falls_back_for_unknown_language_and_key(self):
         translator = Translator("de")
         self.assertEqual(translator.language, "en")

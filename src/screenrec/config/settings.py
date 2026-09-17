@@ -5,13 +5,16 @@ from pathlib import Path
 from platformdirs import user_config_path, user_videos_path
 from .recording import FORMATS, QUALITIES, AUDIO_MODES
 from .templates import default_template
+from screenrec.logger.logger import get_logger
+log = get_logger(__name__)
 
 
 @dataclass
 class Settings:
     output_dir: str = str(user_videos_path() / "ScreenRec")
     fps: int = 30
-    close_to_tray: bool = True
+    close_to_tray: bool = False
+    allow_multiple_instances: bool = False
     notifications: bool = True
     file_format: str = "mp4"
     quality: str = "balanced"

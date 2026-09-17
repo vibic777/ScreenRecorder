@@ -4,6 +4,9 @@ import traceback
 import multiprocessing
 import platform
 from pathlib import Path
+from PySide6.QtCore import QLockFile
+from screenrec.logger.logger import get_logger
+log = get_logger(__name__)
 
 
 def profile_path_from_args(argv):
@@ -33,6 +36,7 @@ def show_runtime_error(message):
 
 def main():
     multiprocessing.freeze_support()
+    log.trace("Process entrypoint started")
     if not getattr(sys, "frozen", False) and sys.prefix == sys.base_prefix:
         raise SystemExit("Запустите ScreenRec внутри .venv: python -m screenrec.main")
     if "--profile" in sys.argv:
@@ -49,6 +53,19 @@ def main():
     from .app import ScreenRecApp
 
     application = QApplication(sys.argv)
+    from .config.settings import Settings
+    from .config.profiles import load_profile, load_default_profile
+    startup_settings = load_profile(profile_path) if profile_path else (load_default_profile() or Settings.load())
+    instance_lock = None
+    log.debug("Startup settings loaded: language=%s single_instance=%s", startup_settings.language, not startup_settings.allow_multiple_instances)
+    if not startup_settings.allow_multiple_instances:
+        instance_lock = QLockFile(str(Settings.path().with_name("instance.lock")))
+        instance_lock.setStaleLockTime(0)
+        if not instance_lock.tryLock(100):
+            log.warning("Second instance rejected by lock")
+            show_runtime_error("ScreenRec уже запущен. Разрешите несколько копий в настройках, если это необходимо.")
+            return 1
+    log.debug("Instance lock acquired or multiple instances allowed")
     application.setApplicationName("ScreenRec")
     try:
         controller = ScreenRecApp(application, profile_path=profile_path)

@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 from imageio_ffmpeg import count_frames_and_secs, get_ffmpeg_exe
 from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtCore import QLockFile
 
 from screenrec.app import ScreenRecApp
 from screenrec.config.settings import Settings
@@ -91,7 +92,7 @@ class StageOneTests(unittest.TestCase):
 
     def test_tray_stop_restart_and_exit(self):
         with tempfile.TemporaryDirectory() as folder, \
-             patch("screenrec.app.Settings.load", return_value=Settings(output_dir=folder, notifications=False)), \
+             patch("screenrec.app.Settings.load", return_value=Settings(output_dir=folder, notifications=False, close_to_tray=True)), \
              patch("screenrec.app.monitors", return_value=[MONITOR]), \
              patch("screenrec.recorder.worker.ScreenSource", SyntheticSource), \
              patch("screenrec.app.QSystemTrayIcon.isSystemTrayAvailable", return_value=True):
@@ -130,6 +131,24 @@ class StageOneTests(unittest.TestCase):
                 controller.deleteLater()
                 self.qt.processEvents()
 
+    def test_exit_paths_dispatch_application_exit(self):
+        with patch("screenrec.app.QSystemTrayIcon.isSystemTrayAvailable", return_value=False), patch("screenrec.app.Settings.load", return_value=Settings()):
+            controller = ScreenRecApp(self.qt)
+            try:
+                with patch.object(controller.application, "exit") as exit_mock:
+                    controller.close_window()
+                    exit_mock.assert_called_once_with(0)
+                    controller.exiting = False
+                    exit_mock.reset_mock()
+                    controller.exit_action.trigger()
+                    exit_mock.assert_called_once_with(0)
+            finally:
+                controller.cleanup()
+                controller.timer.stop()
+                controller.window.deleteLater()
+                controller.deleteLater()
+                self.qt.processEvents()
+
     def test_missing_tray_exits_instead_of_hiding(self):
         with patch("screenrec.app.monitors", return_value=[MONITOR]), \
              patch("screenrec.app.Settings.load", return_value=Settings()), \
@@ -142,6 +161,18 @@ class StageOneTests(unittest.TestCase):
             controller.window.deleteLater()
             controller.deleteLater()
             self.qt.processEvents()
+
+    def test_single_instance_lock_allows_only_one_lock(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = str(Path(directory) / "instance.lock")
+            first = QLockFile(path)
+            second = QLockFile(path)
+            self.assertTrue(first.tryLock(100))
+            try:
+                self.assertFalse(second.tryLock(100))
+            finally:
+                first.unlock()
+                second.unlock()
 
     def test_settings_roundtrip_and_malformed_file(self):
         with tempfile.TemporaryDirectory() as folder, \

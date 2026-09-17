@@ -42,6 +42,15 @@ class LoggingDialog(QDialog):
             row.addWidget(box)
             self.levels[name]=box
         layout.addLayout(row)
+        bulk_row=QHBoxLayout()
+        select_all=QPushButton(self.t("logging.select_all"))
+        clear_all=QPushButton(self.t("logging.clear_all"))
+        bulk_row.addWidget(select_all)
+        bulk_row.addWidget(clear_all)
+        bulk_row.addStretch()
+        layout.addLayout(bulk_row)
+        select_all.clicked.connect(lambda: self.set_all_levels(True))
+        clear_all.clicked.connect(lambda: self.set_all_levels(False))
         note=QLabel(self.t("logging.note"))
         note.setWordWrap(True)
         layout.addWidget(note)
@@ -57,6 +66,10 @@ class LoggingDialog(QDialog):
         open_dir.clicked.connect(lambda:self.open(True))
     def t(self,key):
         return self.translator.tr(key)
+
+    def set_all_levels(self, checked):
+        for box in self.levels.values():
+            box.setChecked(checked)
 
     def browse(self):
         path,_=QFileDialog.getSaveFileName(self,self.t("logging.file_title"),self.path.text(),self.t("logging.file_filter"))
