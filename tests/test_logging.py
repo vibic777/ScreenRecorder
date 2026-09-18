@@ -98,3 +98,10 @@ class LoggingTests(TestCase):
         dialog.reject()
         self.assertFalse(settings.logging_enabled)
         dialog.deleteLater()
+    def test_logging_note_has_line_breaks(self):
+        app=QApplication.instance() or QApplication([])
+        for language in ("en", "ru"):
+            dialog=LoggingDialog(Settings(language=language))
+            labels=[label.text() for label in dialog.findChildren(__import__("PySide6.QtWidgets", fromlist=["QLabel"]).QLabel)]
+            self.assertTrue(any("\n" in text for text in labels))
+            dialog.deleteLater()

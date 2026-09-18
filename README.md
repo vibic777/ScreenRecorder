@@ -27,7 +27,7 @@ ScreenRec records locally and does not upload recordings, logs, tab contents, ov
 
 ## Release status
 
-Version 0.9.0 is under development and is not a public release.
+Version 0.9.2 is the current Windows release. Windows 11 was verified; Windows 10 is the supported VM verification target.
 
 ## Modern build, profiles and cleanup
 

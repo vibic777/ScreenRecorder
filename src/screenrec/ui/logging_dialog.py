@@ -51,7 +51,7 @@ class LoggingDialog(QDialog):
         layout.addLayout(bulk_row)
         select_all.clicked.connect(lambda: self.set_all_levels(True))
         clear_all.clicked.connect(lambda: self.set_all_levels(False))
-        note=QLabel(self.t("logging.note"))
+        note=QLabel(self.t("logging.note").replace("/n", "\n").replace("\\n", "\n"))
         note.setWordWrap(True)
         layout.addWidget(note)
         buttons=QDialogButtonBox(QDialogButtonBox.StandardButton.Save|QDialogButtonBox.StandardButton.Cancel)
