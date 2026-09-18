@@ -7,6 +7,7 @@ from screenrec.config.settings import Settings
 from screenrec.localization import Translator
 from screenrec.config.commands import COMMANDS, commands_for
 from screenrec.ui.main_window import MainWindow
+from screenrec.version import __version__
 
 
 class LocalizationStartupTests(unittest.TestCase):
@@ -23,7 +24,7 @@ class LocalizationStartupTests(unittest.TestCase):
 
     def test_english_startup(self):
         window = self.make_window("en")
-        self.assertEqual(window.windowTitle(), "ScreenRec — Screen Recorder")
+        self.assertEqual(window.windowTitle(), f"ScreenRec — Screen Recorder v{__version__}")
         self.assertEqual(window.tabs.tabText(0), "Recording")
         self.assertEqual(window.tabs.tabText(1), "Recordings")
         self.assertEqual(window.start.text(), "Start recording")
@@ -31,11 +32,19 @@ class LocalizationStartupTests(unittest.TestCase):
 
     def test_russian_startup(self):
         window = self.make_window("ru")
-        self.assertEqual(window.windowTitle(), "ScreenRec — Запись экрана")
+        self.assertEqual(window.windowTitle(), f"ScreenRec — Запись экрана v{__version__}")
         self.assertEqual(window.tabs.tabText(0), "Запись")
         self.assertEqual(window.tabs.tabText(1), "Записи")
         self.assertEqual(window.start.text(), "Начать запись")
         self.assertEqual(window.source_mode.itemText(0), "Монитор")
+
+    def test_recording_settings_note_has_real_line_break(self):
+        from screenrec.ui.settings_dialog import SettingsDialog
+        dialog = SettingsDialog(Settings())
+        self.addCleanup(dialog.close)
+        note = dialog.layout().itemAt(dialog.layout().count() - 2).widget()
+        self.assertIn("\n", note.text())
+        self.assertNotIn("\\n", note.text())
 
     def test_help_text_has_normalizable_line_breaks(self):
         for language in ("en", "ru"):

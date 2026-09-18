@@ -2,6 +2,7 @@ from PySide6.QtCore import Signal
 from ..localization import Translator
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                               QLabel, QComboBox, QPushButton, QLineEdit, QCheckBox, QTabWidget, QScrollArea)
+from ..version import __version__
 
 
 class MainWindow(QMainWindow):
@@ -10,7 +11,7 @@ class MainWindow(QMainWindow):
     def __init__(self, settings, icon):
         super().__init__()
         self.translator = Translator(settings.language)
-        self.setWindowTitle(self.t("window.title"))
+        self.setWindowTitle(f"{self.t('window.title')} v{__version__}")
         self.setWindowIcon(icon)
         self.resize(740, 460)
         body = QWidget()
