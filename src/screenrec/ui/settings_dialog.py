@@ -39,7 +39,7 @@ class SettingsDialog(QDialog):
         self.message = QLabel()
         self.message.setWordWrap(True)
         form.addRow(self.message)
-        note = QLabel(self.t("settings.note_quality") + "\\n" + self.t("settings.note_audio"))
+        note = QLabel(self.t("settings.note_quality") + "\n" + self.t("settings.note_audio"))
         note.setWordWrap(True)
         form.addRow(note)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)

@@ -21,6 +21,7 @@ from .config.commands import COMMANDS, commands_for
 from .ui.sources import SourceController
 from .ui.themes.theme_manager import THEMES, apply_theme
 from .logger.logger import get_logger, configure as configure_log, hub, shutdown as close_log, LEVELS
+from .version import __version__
 log = get_logger(__name__)
 
 
@@ -43,6 +44,7 @@ class ScreenRecApp(SourceController, QObject):
         application.setWindowIcon(self.icon)
         application.setQuitOnLastWindowClosed(False)
         self.window = MainWindow(self.settings, self.icon)
+        self.window.setWindowTitle(f"{self.translator.tr('window.title')} v{__version__}")
         self.start_action = QAction(self.translator.tr("action.start"), self)
         self.stop_action = QAction(self.translator.tr("action.stop.full"), self)
         self.stop_action.setEnabled(False)
@@ -145,7 +147,7 @@ class ScreenRecApp(SourceController, QObject):
             html = html.replace(heading, f"<br><h3>{heading}</h3>")
         html += "<br><h3>" + escape(self.translator.tr("help.shortcuts")) + "</h3>" + escape(shortcuts).replace("\n", "<br>")
         dialog = QDialog(self.window)
-        dialog.setWindowTitle(self.translator.tr("help.title"))
+        dialog.setWindowTitle(f"{self.translator.tr('help.title')} v{__version__}")
         dialog.resize(820, 620)
         layout = QVBoxLayout(dialog)
         browser = QTextBrowser(dialog)
