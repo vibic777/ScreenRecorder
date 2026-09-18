@@ -5,6 +5,7 @@ build/
 dist/
 *.log
 .test-output/
+technical-debt/
 
 releases/
 
