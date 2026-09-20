@@ -1,8 +1,8 @@
 from dataclasses import replace
 from pathlib import Path
-from PySide6.QtCore import QUrl
-from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QCheckBox,QLineEdit,QPushButton,
+from screenrec.qt.QtCore import QUrl
+from screenrec.qt.QtGui import QDesktopServices
+from screenrec.qt.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QCheckBox,QLineEdit,QPushButton,
     QLabel,QDialogButtonBox,QFileDialog,QMessageBox)
 from screenrec.logger.logger import LEVELS,get_default_log_path
 from screenrec.localization import Translator

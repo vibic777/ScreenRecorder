@@ -58,6 +58,20 @@ class WindowSource:
             raise RuntimeError("Выбранное окно закрыто. Выберите окно заново.")
 
     def __enter__(self):
+        if os.environ.get("SCREENREC_QT") == "PySide2":
+            # Windows Graphics Capture is Windows 10+ only.  The legacy
+            # profile uses the Win8-compatible desktop grabber instead.
+            from PIL import ImageGrab
+            self.validate()
+            rect = wt.RECT()
+            user32.GetWindowRect(self.target["hwnd"], ctypes.byref(rect))
+            if rect.right <= rect.left or rect.bottom <= rect.top:
+                raise RuntimeError("У выбранного окна недоступный размер.")
+            self.legacy_grab = ImageGrab
+            self.legacy_rect = (rect.left, rect.top, rect.right, rect.bottom)
+            self.width = rect.right - rect.left
+            self.height = rect.bottom - rect.top
+            return self
         from windows_capture import WindowsCapture
         self.validate()
         if user32.IsIconic(self.target["hwnd"]):
@@ -81,6 +95,15 @@ class WindowSource:
         return self
 
     def grab(self):
+        if hasattr(self, "legacy_grab"):
+            import numpy as np
+            self.validate()
+            rect = wt.RECT()
+            user32.GetWindowRect(self.target["hwnd"], ctypes.byref(rect))
+            box = (rect.left, rect.top, rect.right, rect.bottom)
+            image = np.asarray(self.legacy_grab.grab(bbox=box).convert("RGBA"))
+            image = image[:, :, [2, 1, 0, 3]]
+            return image.tobytes()
         import cv2
         import numpy as np
         self.validate()

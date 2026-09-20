@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QMenu, QSystemTrayIcon
+from screenrec.qt.QtWidgets import QMenu, QSystemTrayIcon
 
 
 def create_tray(parent, icon, start_action, stop_action, show_action, exit_action):

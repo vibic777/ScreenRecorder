@@ -2,6 +2,8 @@ import os
 import platform
 
 import mss
+from screenrec.logger.logger import get_logger
+log = get_logger(__name__)
 
 
 def check_platform():
@@ -25,11 +27,14 @@ class ScreenSource:
 
     def __enter__(self):
         check_platform()
+        log.debug("Opening mss screen capture: monitor=%s", self.monitor)
         self.capture = mss.mss()
+        log.debug("mss screen capture opened")
         return self
 
     def grab(self):
         region = {key: self.monitor[key] for key in ("left", "top", "width", "height")}
+        log.trace("Grabbing screen region: %s", region)
         return self.capture.grab(region).bgra
 
     def __exit__(self, *_):

@@ -87,3 +87,28 @@ class OverlayTests(unittest.TestCase):
         editor.reject()
         self.assertEqual(original.overlay,templates.default_template())
         editor.deleteLater()
+
+    def test_editor_preview_shows_inactive_text_inside_its_box(self):
+        settings=Settings()
+        settings.overlay["text"].update(enabled=False,text="Preview text",x=.05,y=.8,w=.8,h=.15)
+        editor=OverlayEditor(settings)
+        editor.resize(720,560)
+        editor.show()
+        self.app.processEvents()
+        editor.kind.setCurrentIndex(editor.kind.findData("text"))
+        self.app.processEvents()
+        image=QImage(editor.canvas.size(),QImage.Format.Format_ARGB32)
+        image.fill(QColor("transparent"))
+        editor.canvas.render(image)
+        box=editor.canvas.box("text").toAlignedRect()
+        painted=False
+        for y in range(box.top(),box.bottom()+1):
+            for x in range(box.left(),box.right()+1):
+                if image.pixelColor(x,y).alpha()>0 and image.pixelColor(x,y)!=QColor("#344454"):
+                    painted=True
+                    break
+            if painted:
+                break
+        self.assertTrue(painted)
+        editor.reject()
+        editor.deleteLater()

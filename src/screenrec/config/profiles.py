@@ -1,4 +1,5 @@
 """Portable, versioned settings profile format."""
+from __future__ import annotations
 import json
 from dataclasses import asdict
 from datetime import datetime, timezone

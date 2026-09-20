@@ -34,7 +34,7 @@ def run(arguments):
     os.environ["QT_QPA_PLATFORM"] = "windows" if args.window_fixture else "offscreen"
     worker = None
     try:
-        from PySide6.QtWidgets import QApplication, QWidget
+        from screenrec.qt.QtWidgets import QApplication, QWidget
         from imageio_ffmpeg import get_ffmpeg_exe, count_frames_and_secs
         from .app import ScreenRecApp
         from .config.settings import Settings
@@ -46,7 +46,7 @@ def run(arguments):
             assert (extension / name).is_file(), f"Missing extension resource: {name}"
         settings = Settings(output_dir=str(directory), fps=15, file_format=args.format,
                             audio_mode=args.audio, notifications=False)
-        from PySide6.QtGui import QImage, QColor
+        from screenrec.qt.QtGui import QImage, QColor
         from .config.templates import default_template
         logo = QImage(40,30,QImage.Format.Format_ARGB32)
         logo.fill(QColor("red"))
@@ -74,7 +74,7 @@ def run(arguments):
             controller = ScreenRecApp(app)
             assert not controller.icon.isNull(), "Missing application icon"
             from .ui.themes.theme_manager import THEMES
-            from PySide6.QtGui import QIcon
+            from screenrec.qt.QtGui import QIcon
             for name, theme in THEMES.items():
                 with patch.object(Settings, "path", return_value=directory / "theme-settings.json"):
                     controller.theme_actions[name].trigger()
@@ -157,20 +157,26 @@ def run(arguments):
         info = probe.stderr.decode(errors="replace")
         assert ("Audio:" in info) == (args.audio != "none"), info
         from .ui.recordings_view import RecordingsView
-        from PySide6.QtMultimedia import QMediaPlayer
+        from screenrec.qt import BACKEND
+        from screenrec.qt.QtMultimedia import QMediaPlayer
         viewer = RecordingsView(directory)
         try:
             viewer.resize(1000,650)
             viewer.show()
             viewer.refresh(select=video)
             deadline = time.monotonic()+15
-            while viewer.frame_image is None and time.monotonic()<deadline:
+            while viewer.player.duration() <= 0 and time.monotonic()<deadline:
                 app.processEvents()
                 time.sleep(.01)
-            assert viewer.frame_image is not None, viewer.player.errorString()
             assert viewer.player.error() == QMediaPlayer.Error.NoError
             assert viewer.player.duration() > 0
-            viewer.frame_image.save(str(directory / "player-frame.png"))
+            if BACKEND == "PySide6":
+                deadline = time.monotonic()+15
+                while viewer.frame_image is None and time.monotonic()<deadline:
+                    app.processEvents()
+                    time.sleep(.01)
+                assert viewer.frame_image is not None, viewer.player.errorString()
+                viewer.frame_image.save(str(directory / "player-frame.png"))
             viewer.grab().save(str(directory / "player.png"))
             viewer.set_muted(True)
             viewer.toggle_play()

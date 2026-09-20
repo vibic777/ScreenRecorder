@@ -2,8 +2,8 @@ import json
 import shutil
 from pathlib import Path
 from datetime import datetime
-from PySide6.QtGui import QGuiApplication
-from PySide6.QtWidgets import QFileDialog, QMessageBox
+from screenrec.qt.QtGui import QGuiApplication
+from screenrec.qt.QtWidgets import QFileDialog, QMessageBox
 from .region_selector import RegionSelector
 from screenrec.logger.logger import get_logger
 log = get_logger(__name__)

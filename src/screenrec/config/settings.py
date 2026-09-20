@@ -22,9 +22,9 @@ class Settings:
     microphone_id: str = ""
     system_device_id: str = ""
     audio_bitrate: int = 192
-    logging_enabled: bool = False
+    logging_enabled: bool = True
     log_path: str = ""
-    log_levels: list = field(default_factory=lambda: ["INFO","WARNING","ERROR","CRITICAL","FATAL"])
+    log_levels: list = field(default_factory=lambda: ["TRACE","DEBUG","INFO","WARNING","ERROR","CRITICAL","FATAL"])
     filename_prefix: str = "ScreenRec"
     filename_date: bool = True
     filename_time: bool = True

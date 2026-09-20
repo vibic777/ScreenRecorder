@@ -9,5 +9,5 @@ exit /b 2
 call scripts\build_modern.bat
 exit /b %errorlevel%
 :legacy
-echo Legacy build is paused until the Python 3.8/PySide2 environment and Windows 7/8.1 VM are available.
-exit /b 3
+call scripts\build_legacy.bat
+exit /b %errorlevel%

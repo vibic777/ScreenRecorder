@@ -1,6 +1,6 @@
 from dataclasses import replace
 from datetime import datetime
-from PySide6.QtWidgets import (QDialog,QFormLayout,QLineEdit,QCheckBox,QComboBox,QLabel,
+from screenrec.qt.QtWidgets import (QDialog,QFormLayout,QLineEdit,QCheckBox,QComboBox,QLabel,
                               QDialogButtonBox,QPushButton)
 from screenrec.config.filenames import DATE_FORMATS,TIME_FORMATS,filename,clean_prefix
 from screenrec.localization import Translator

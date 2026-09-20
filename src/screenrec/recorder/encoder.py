@@ -12,13 +12,12 @@ log = get_logger(__name__)
 class Encoder:
     """Write BGRA frames, finalize on EOF, keep diagnostics out of pipe buffers."""
 
-    def __init__(self, path: Path, width: int, height: int, fps: int, file_format="mp4", quality="balanced", overlay=None):
+    def __init__(self, path: Path, width: int, height: int, fps: int, file_format="mp4", quality="balanced", overlay=None, overlay_path=None):
         if path.exists():
             raise FileExistsError(f"Файл уже существует: {path}")
         self.overlay_directory = None
         from .overlay import enabled, prepare, ffmpeg_options
-        overlay_path = None
-        if enabled(overlay):
+        if overlay_path is None and enabled(overlay):
             self.overlay_directory = tempfile.TemporaryDirectory(prefix="screenrec-overlay-")
             try:
                 overlay_path = prepare(overlay, width, height, Path(self.overlay_directory.name) / "overlay.png")
@@ -31,6 +30,7 @@ class Encoder:
         self.process = None
         self.timed_out = False
         try:
+            log.debug("Starting FFmpeg: input=%sx%s overlay=%s output=%s", width, height, overlay_path is not None, path)
             self.process = subprocess.Popen(
                 [get_ffmpeg_exe(), "-hide_banner", "-loglevel", "error", "-n",
                  "-f", "rawvideo", "-pixel_format", "bgra", "-video_size", f"{width}x{height}",
@@ -39,6 +39,7 @@ class Encoder:
                 stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=self.errors,
                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             )
+            log.debug("FFmpeg process started: pid=%s", self.process.pid)
         except BaseException:
             self.errors.close()
             if self.overlay_directory:
@@ -46,6 +47,8 @@ class Encoder:
             raise
 
     def write(self, frame):
+        if self.process.poll() is not None:
+            raise RuntimeError("Кодировщик завершился до записи первого кадра.")
         self.process.stdin.write(frame)
 
     def abort(self):

@@ -48,3 +48,4 @@ logs/
 *.swp
 .DS_Store
 Thumbs.db
+.venv-legacy/

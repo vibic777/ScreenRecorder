@@ -1,13 +1,16 @@
 """Two draggable/resizable normalized rectangles on a frame mock-up."""
 from copy import deepcopy
-from PySide6.QtCore import Qt, QRectF, Signal
-from PySide6.QtGui import QPainter, QColor, QPen
-from PySide6.QtWidgets import (QDialog, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QComboBox,
+from screenrec.qt.QtCore import Qt, QRectF, QPointF, Signal
+from screenrec.qt.QtGui import QPainter, QColor, QPen
+from screenrec.qt.QtWidgets import (QDialog, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QComboBox,
     QPushButton, QCheckBox, QLineEdit, QPlainTextEdit, QDoubleSpinBox, QFontComboBox,
     QColorDialog, QFileDialog, QDialogButtonBox, QLabel, QMessageBox)
 from screenrec.config import templates
 from screenrec.localization import Translator
 from screenrec.recorder.overlay import render, load_image
+from screenrec.logger.logger import get_logger
+
+log = get_logger(__name__)
 
 class Canvas(QWidget):
     changed = Signal()
@@ -30,12 +33,19 @@ class Canvas(QWidget):
         painter.fillRect(self.rect(),QColor("#121820"))
         frame=self.frame()
         painter.fillRect(frame,QColor("#344454"))
-        painter.setPen(QColor("#a7b5c5"))
-        painter.drawText(frame,Qt.AlignmentFlag.AlignCenter,self.editor.t("overlay.canvas"))
+        # The selected text must remain visible while editing even if its
+        # recording checkbox is off; the outline still indicates its bounds.
         data=deepcopy(self.editor.template)
+        if self.editor.kind.currentData() == "text" and data["text"]["text"].strip():
+            data["text"]["enabled"] = True
         if self.editor.picture is None:
             data["image"]["enabled"]=False
-        overlay=render(data,max(1,round(frame.width())),max(1,round(frame.height())),self.editor.picture)
+        try:
+            overlay=render(data,max(1,round(frame.width())),max(1,round(frame.height())),self.editor.picture)
+        except Exception:
+            log.exception("Overlay preview rendering failed")
+            painter.end()
+            return
         painter.drawImage(frame,overlay)
         for kind in ("image","text"):
             if not self.editor.template[kind]["enabled"] and self.editor.kind.currentData()!=kind:
@@ -48,20 +58,22 @@ class Canvas(QWidget):
     def mousePressEvent(self,event):
         if event.button()!=Qt.MouseButton.LeftButton:
             return
+        point=event.position() if hasattr(event,"position") else QPointF(event.pos())
         for kind in (self.editor.kind.currentData(), "text", "image"):
             rect=self.box(kind)
-            if rect.adjusted(-7,-7,7,7).contains(event.position()):
+            if rect.adjusted(-7,-7,7,7).contains(point):
                 self.editor.kind.setCurrentIndex(self.editor.kind.findData(kind))
-                self.anchor=event.position()
+                self.anchor=point
                 self.original=deepcopy(self.editor.template[kind])
-                self.drag="resize" if (event.position()-rect.bottomRight()).manhattanLength()<20 else "move"
+                self.drag="resize" if (point-rect.bottomRight()).manhattanLength()<20 else "move"
                 return
     def mouseMoveEvent(self,event):
         if not self.drag:
             return
         r=self.frame()
-        dx=(event.position().x()-self.anchor.x())/r.width()
-        dy=(event.position().y()-self.anchor.y())/r.height()
+        point=event.position() if hasattr(event,"position") else QPointF(event.pos())
+        dx=(point.x()-self.anchor.x())/r.width()
+        dy=(point.y()-self.anchor.y())/r.height()
         d=self.editor.template[self.editor.kind.currentData()]
         old=self.original
         if self.drag=="move":
@@ -195,7 +207,7 @@ class OverlayEditor(QDialog):
         self.image_path.setText(self.template["image"]["path"])
         text=self.template["text"]
         self.text.setPlainText(text["text"])
-        from PySide6.QtGui import QFont
+        from screenrec.qt.QtGui import QFont
         self.font.setCurrentFont(QFont(text["font"]))
         self.size.setValue(text["size"]*100)
         self.loading=False
@@ -232,6 +244,7 @@ class OverlayEditor(QDialog):
         color=QColorDialog.getColor(QColor(self.template["text"]["color"]),self,self.t("overlay.text_color_title"))
         if color.isValid():
             self.template["text"]["color"]=color.name()
+            log.info("Overlay text color changed: %s", color.name())
             self.canvas.update()
     def load_template(self):
         name=self.names.currentText().strip()
@@ -265,5 +278,13 @@ class OverlayEditor(QDialog):
                 return False
         return True
     def apply(self):
+        # Entering text is an explicit request to show the text layer. This
+        # also prevents old templates with a stale disabled flag from silently
+        # recording without the text the user just configured.
+        if self.template["text"]["text"].strip():
+            self.template["text"]["enabled"] = True
         if self.valid():
+            log.info("Overlay editor applying: image=%s text=%s text_color=%s",
+                     self.template["image"]["enabled"], self.template["text"]["enabled"],
+                     self.template["text"]["color"])
             self.accept()

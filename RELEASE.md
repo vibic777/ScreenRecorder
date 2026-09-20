@@ -1,49 +1,24 @@
-# Локальный релиз ScreenRec 0.9.2
+# ScreenRec 0.9.3 release
 
-Запустите ScreenRec.exe, выберите монитор, область, окно или вкладку и настройте конфигуратор. По умолчанию звук выключен. Python и отдельный FFmpeg не нужны. Для вкладки установите расширение вручную по README.md: экспортируйте из EXE или распакуйте ZIP.
+This release publishes two Windows x64 executables:
 
-Windows x64: один EXE включает Python, Qt, FFmpeg, захват окон, звук и файлы расширения. Linux-бинарника нет; Linux X11 требует проверки. Свёрнутые/защищённые окна не гарантируются. Системный звук включает другие приложения.
+- `ScreenRec-0.9.3-Windows10-11-x64.exe` — Modern, Python 3.13/PySide6, Windows 10 1809+ and Windows 11.
+- `ScreenRec-0.9.3-Windows8-8.1-x64.exe` — Legacy, Python 3.8/PySide2, Windows 8/8.1.
 
-## Комплект
+Local build outputs are `dist/modern/ScreenRec.exe` and `dist/legacy/ScreenRec.exe`. Python and a separate FFmpeg installation are not needed to run either executable. Legacy is a compatibility build; test the required capture sources and audio modes on the target Windows 8/8.1 machine.
 
-releases/0.9.2/: ScreenRec.exe, ZIP приложения с папкой browser-extension, отдельный ZIP расширения, ZIP исходников, документация, requirements-windows-lock.txt, manifest.json и SHA256SUMS.txt. Манифест содержит точный коммит. Проверка: Get-FileHash -Algorithm SHA256 <файл>.
+## Validation
 
-## Выпуск
+- Modern: `scripts/build_modern.bat` and `scripts/setup_venv_windows.bat`.
+- Legacy: install Python 3.8 x64, run `scripts/setup_venv_legacy.bat`, then `scripts/build_legacy.bat`.
+- Run the modern pytest suite and `pip check`; compile/import-smoke the Legacy sources in `.venv-legacy`.
+- Test overlay preview, text/image recording, recording playback, and the selected audio mode on each supported Windows target.
+- Attach `SHA256SUMS.txt` with both EXEs to the GitHub Release. Do not commit executables or other generated build artifacts into Git history.
 
-1. Обновить код, AGENT.md, README.md, CHANGELOG.md и RELEASE.md. Обновить версию в pyproject.toml и манифесте расширения.
-2. Настроить venv через scripts/setup_venv_windows.bat. Выполнить python -m pip check и python -m unittest discover -s tests -v.
-3. Проверить новые источники scripts/smoke_sources.py и scripts/smoke_browser.py (требует requirements-dev.txt и Chromium Playwright). При изменении звука использовать scripts/smoke_exe.ps1.
-4. Проверить diff, создать локальный коммит. Рабочее дерево должно быть чистым.
-5. Запустить scripts/release_windows.bat: проверки, сборка одного EXE, автономная синтетическая запись, архивы, манифест и SHA-256.
-6. Проверить EXE с --self-test --window-fixture --output .test-output/exe-window и прочитать JSON-отчёт. Обычный запуск автоматически ничего не записывает.
-7. После успешных проверок создать локальный аннотированный тег git tag -a v0.9.2 -m "ScreenRec 0.7.0".
+## Publish
 
-Готовые версии не перезаписываются. После ошибки остаётся .pending. Артефакты, venv и тестовые записи не коммитятся.
+Commit the source and documentation, create the annotated `v0.9.3` tag, push the branch and tag, then create GitHub Release `v0.9.3` with both named EXEs, this release note, and SHA-256 sums. The browser extension retains its independent version.
 
-Локальный комплект в `releases/0.7.0/` готов. Публикация в GitHub — только по прямой команде пользователя.
+## Product notes
 
-```powershell
-# один раз
-winget install --id GitHub.cli
-gh auth login --web
-
-# создать репозиторий и выложить исходники + EXE (пример)
-.\scripts\publish_github.ps1 -Repo YOUR_GITHUB_USER/ScreenRecorder -CreateRepo
-
-# если remote origin уже настроен
-.\scripts\publish_github.ps1
-```
-
-Скрипт пушит ветку и тег `v0.7.0`, затем создаёт GitHub Release с `ScreenRec.exe`, ZIP-ами, `SHA256SUMS.txt` и `manifest.json`. Каталог `releases/` в git не коммитится.
-
-Темы: Настройки → Тема → Зелёная / Синяя / Серая / Чёрная. Выбор сохраняется, иконки окна и трея меняются сразу. Диагностика EXE проверяет все темы и сохраняет theme-*.png. Расширение браузера не изменено и сохраняет собственную версию 0.3.0.
-
-Наложения: кнопка «Картинка и текст…» → выберите элементы, настройте прямоугольники/текст → «Применить». Общий флажок отключает наложения. Подробности шаблонов и ограничений — README.md. Диагностика EXE проверяет картинку в итоговом кадре и создаёт overlay-editor.png; 16 автотестов. Новые зависимости не добавлены. EXE без UPX и цифровой подписи. Не загружать его в VirusTotal или другие внешние сервисы без прямой команды пользователя.
-
-Конструктор имени: «Имя файла…» в главном окне, настройках или конфигураторе. Свой префикс, дата, время 12/24 часа и UUID управляются отдельно. При совпадении имён добавляется числовой суффикс. Подробнее — README.md. Всего 19 автотестов; диагностика EXE проверяет Custom.<формат> и создаёт filename-editor.png.
-
-Логгер выключен по умолчанию. Настройки → Логирование: файл, галочки уровней, включение/выключение в рантайме. По умолчанию screenrec.log рядом с EXE; ротация 5 МБ × основной файл и три копии. Подробности резервного пути и ошибок записи — README.md. 22 автотеста; диагностика EXE проверяет все уровни и выключение, создаёт diagnostic.log в тестовой папке. Самопроверка специально включает логгер только для диагностики, обычный запуск этого не делает.
-
-Проигрыватель: вкладка «Записи» → выберите файл → стандартные кнопки управления. «Развернуть» увеличивает предпросмотр, «Полный экран»/F11 открывает полноэкранный режим, Esc возвращает обратно. Новая запись выбирается без запуска звука. При захвате плеер блокируется. 25 автотестов; диагностический EXE дополнительно проверяет воспроизведение и создаёт player.png/player-frame.png. Подробности возможностей и оставшихся ограничений каталога — README.md.
-
-Скрипт релиза собирает EXE в build/release-<версия>, затем копирует его в releases/<версия>. Он не заменяет dist/ScreenRec.exe и не останавливает работающую программу. Для проверки новой версии запускайте releases/0.9.2/ScreenRec.exe. Обычный build_windows.bat по-прежнему собирает в dist.
+Recording is local. The app does not upload recordings, logs, browser tab contents, overlay text, or diagnostics. Startup logging is enabled at all levels and writes `screenrec.log` beside the EXE; users can change or disable it. Default audio mode is silent. The browser extension is installed manually. Linux has no release artifact and remains unverified.

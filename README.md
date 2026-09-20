@@ -15,7 +15,7 @@ ScreenRec is a Windows desktop screen recorder built with Python, PySide6/Qt 6 a
 
 ## Windows support
 
-The modern build targets 64-bit Windows 10 1809 or newer and Windows 11. Windows 10 compatibility is pending VM verification. Linux support is deferred until a separate compatibility check; no Linux artifact is part of the current modern track.
+The Modern build targets 64-bit Windows 10 1809 or newer and Windows 11 (Python 3.13/PySide6). The separate Legacy build targets Windows 8/8.1 x64 (Python 3.8/PySide2). Build them with `scripts/build_modern.bat` and `scripts/build_legacy.bat`; outputs are `dist/modern/ScreenRec.exe` and `dist/legacy/ScreenRec.exe`. Linux support is deferred until a separate compatibility check.
 
 ## Development
 
@@ -23,15 +23,15 @@ Use the project virtual environment. On Windows run scripts/setup_venv_windows.b
 
 ## Privacy
 
-ScreenRec records locally and does not upload recordings, logs, tab contents, overlay text, or diagnostics. Logs are disabled by default. Do not commit credentials, private keys, local configuration, virtual environments, build artifacts, or test recordings.
+ScreenRec records locally and does not upload recordings, logs, tab contents, overlay text, or diagnostics. Startup logging is enabled with all levels and writes `screenrec.log` beside the executable (or source package). Do not commit credentials, private keys, local configuration, virtual environments, build artifacts, or test recordings.
 
 ## Release status
 
-Version 0.9.2 is the current Windows release. Windows 11 was verified; Windows 10 is the supported VM verification target.
+Version 0.9.3 provides separate Modern (Windows 10/11) and Legacy (Windows 8/8.1) executables. Verify downloaded release assets against the attached SHA-256 checksums.
 
 ## Modern build, profiles and cleanup
 
-The modern track is the supported Windows 10/11 x64 build. It uses Python 3.13 x64, PySide6/Qt 6, PyInstaller 6 and the project virtual environment.
+The Modern track uses Python 3.13 x64 and PySide6/Qt 6 for Windows 10/11. The Legacy track uses Python 3.8 x64 and PySide2/Qt 5 for Windows 8/8.1.
 
 Prepare the environment with:
 

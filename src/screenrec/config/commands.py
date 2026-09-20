@@ -1,4 +1,5 @@
 """Central registry of application commands and their default shortcuts."""
+from __future__ import annotations
 from dataclasses import dataclass
 
 

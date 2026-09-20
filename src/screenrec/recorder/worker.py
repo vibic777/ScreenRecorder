@@ -1,9 +1,10 @@
 import threading
 import time
+import os
 from pathlib import Path
 from screenrec.config.filenames import reserve
 
-from PySide6.QtCore import QThread, Signal
+from screenrec.qt.QtCore import QThread, Signal
 
 from .encoder import Encoder
 from .screen import ScreenSource
@@ -20,7 +21,7 @@ class RecordingWorker(QThread):
     failed = Signal(str)
     finalizing = Signal()
 
-    def __init__(self, monitor, directory, fps, parent=None, settings=None):
+    def __init__(self, monitor, directory, fps, parent=None, settings=None, overlay_path=None):
         super().__init__(parent)
         self.monitor = monitor
         self.directory = Path(directory)
@@ -28,6 +29,7 @@ class RecordingWorker(QThread):
         self.stop_event = threading.Event()
         self.encoder = None
         self.settings = settings or Settings(fps=fps)
+        self.overlay_path = overlay_path
 
     def stop(self):
         self.stop_event.set()
@@ -56,12 +58,15 @@ class RecordingWorker(QThread):
                 capture_source = window_source(self.monitor)
             else:
                 capture_source = ScreenSource(self.monitor)
+            log.debug("Capture worker: entering screen source")
             with capture_source as source:
+                log.debug("Capture worker: source entered size=%sx%s", getattr(source, "width", None), getattr(source, "height", None))
                 frame = source.grab()
-                log.debug("First source frame received")
+                log.debug("First source frame received: type=%s bytes=%s", type(frame).__name__, getattr(frame, "nbytes", len(frame) if frame is not None else 0))
                 self.encoder = Encoder(video, getattr(source, "width", self.monitor["width"]), getattr(source, "height", self.monitor["height"]), self.fps,
                                        self.settings.file_format, self.settings.quality,
-                                       overlay=self.settings.overlay if self.settings.overlay_enabled else None)
+                                       overlay=self.settings.overlay if self.settings.overlay_enabled else None,
+                                       overlay_path=self.overlay_path)
                 start = time.monotonic()
                 if audio:
                     audio.start(start)
@@ -107,6 +112,12 @@ class RecordingWorker(QThread):
             except Exception as exc:
                 error = str(exc)
         log.debug("Capture worker finished: frames=%s failed=%s",frames,bool(error))
+        if self.overlay_path:
+            try:
+                os.unlink(self.overlay_path)
+                log.debug("Prepared overlay removed: %s", self.overlay_path)
+            except OSError:
+                log.exception("Failed to remove prepared overlay: %s", self.overlay_path)
         if reservation:
             try:
                 reservation.rmdir()

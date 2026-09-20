@@ -4,9 +4,9 @@ from html import escape
 from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QTimer, QUrl, Qt
-from PySide6.QtGui import QActionGroup, QAction, QDesktopServices, QIcon
-from PySide6.QtWidgets import QFileDialog, QMessageBox, QSystemTrayIcon, QDialog, QVBoxLayout, QTextBrowser, QDialogButtonBox
+from screenrec.qt.QtCore import QObject, QTimer, QUrl, Qt
+from screenrec.qt.QtGui import QActionGroup, QAction, QDesktopServices, QIcon
+from screenrec.qt.QtWidgets import QFileDialog, QMessageBox, QSystemTrayIcon, QDialog, QVBoxLayout, QTextBrowser, QDialogButtonBox
 
 from .config.settings import Settings
 from .config.profiles import save_profile, load_profile, load_default_profile
@@ -253,12 +253,14 @@ class ScreenRecApp(SourceController, QObject):
             self.save_settings()
 
     def set_overlay_enabled(self, enabled):
+        log.info("Overlay master switch changed: %s", enabled)
         self.settings.overlay_enabled = enabled
         self.save_settings()
 
     def configure_overlay(self):
         if self.worker:
             return
+        log.info("Opening overlay editor")
         from .ui.overlay_editor import OverlayEditor
         from .recorder.overlay import enabled
         source = self.current_source() or {}
@@ -268,10 +270,17 @@ class ScreenRecApp(SourceController, QObject):
             self.settings.overlay = dialog.template
             self.settings.overlay_name = dialog.names.currentText().strip()
             self.settings.overlay_enabled = enabled(dialog.template)
+            log.info("Overlay editor accepted: switch=%s image=%s text=%s text_color=%s",
+                     self.settings.overlay_enabled,
+                     dialog.template["image"]["enabled"],
+                     dialog.template["text"]["enabled"],
+                     dialog.template["text"]["color"])
             self.window.overlay_enabled.blockSignals(True)
             self.window.overlay_enabled.setChecked(self.settings.overlay_enabled)
             self.window.overlay_enabled.blockSignals(False)
             self.save_settings()
+        else:
+            log.info("Overlay editor cancelled")
 
     def set_theme(self, name, *, save=True):
         log.info("Theme change requested: %s", name)
@@ -370,6 +379,12 @@ class ScreenRecApp(SourceController, QObject):
         monitor = self.current_source()
         if not monitor:
             return
+        from .recorder.overlay import enabled as overlay_has_layers
+        overlay_layers = overlay_has_layers(self.settings.overlay)
+        log.info("Overlay configuration: switch=%s layers=%s image=%s text=%s",
+                 self.settings.overlay_enabled, overlay_layers,
+                 self.settings.overlay.get("image", {}).get("enabled", False),
+                 self.settings.overlay.get("text", {}).get("enabled", False))
         if monitor.get("kind") == "tab":
             from .recorder.browser_tab import BrowserWorker
             self.window.pairing.clear()
@@ -377,8 +392,29 @@ class ScreenRecApp(SourceController, QObject):
             self.worker.pairing_ready.connect(self.show_pairing)
             self.worker.tab_selected.connect(lambda title: self.window.pairing.setToolTip(self.translator.tr("status.tab_recording") + " " + title))
         else:
+            worker_settings = replace(self.settings)
+            prepared_overlay_path = None
+            if worker_settings.overlay_enabled:
+                from .recorder.overlay import enabled as overlay_enabled, prepare as prepare_overlay
+                if overlay_enabled(worker_settings.overlay):
+                    try:
+                        size = (monitor.get("width"), monitor.get("height"))
+                        if not all(size):
+                            raise ValueError("Не удалось определить размер области для наложения.")
+                        from tempfile import NamedTemporaryFile
+                        import os
+                        handle = NamedTemporaryFile(prefix="screenrec-overlay-", suffix=".png", delete=False)
+                        handle.close()
+                        prepared_overlay_path = prepare_overlay(
+                            worker_settings.overlay, size[0], size[1], Path(handle.name))
+                        log.info("Overlay image prepared on UI thread: path=%s size=%sx%s",
+                                 prepared_overlay_path, size[0], size[1])
+                    except Exception as exc:
+                        log.exception("Overlay preparation failed before recording")
+                        self.error("Не удалось подготовить наложение: " + str(exc))
+                        return
             self.worker = RecordingWorker(monitor, self.settings.output_dir, self.settings.fps, self,
-                                          settings=replace(self.settings))
+                                          settings=worker_settings, overlay_path=prepared_overlay_path)
         self.worker.recording_started.connect(self.recording_started)
         self.worker.recording_saved.connect(self.recording_saved)
         self.worker.failed.connect(self.error)

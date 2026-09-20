@@ -90,13 +90,13 @@ class LoggingTests(TestCase):
         app=QApplication.instance() or QApplication([])
         settings=Settings()
         dialog=LoggingDialog(settings)
-        self.assertFalse(dialog.enabled.isChecked())
+        self.assertTrue(dialog.enabled.isChecked())
         dialog.enabled.setChecked(True)
         for key,box in dialog.levels.items():
             box.setChecked(key=="TRACE")
         self.assertEqual(dialog.result_settings().log_levels,["TRACE"])
         dialog.reject()
-        self.assertFalse(settings.logging_enabled)
+        self.assertTrue(settings.logging_enabled)
         dialog.deleteLater()
     def test_logging_note_has_line_breaks(self):
         app=QApplication.instance() or QApplication([])

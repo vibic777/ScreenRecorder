@@ -1,5 +1,5 @@
 from dataclasses import replace
-from PySide6.QtWidgets import (QDialog, QFormLayout, QComboBox, QDialogButtonBox,
+from screenrec.qt.QtWidgets import (QDialog, QFormLayout, QComboBox, QDialogButtonBox,
                               QLabel, QPushButton, QCheckBox)
 from screenrec.config.recording import FORMATS, QUALITIES, AUDIO_MODES
 from screenrec.recorder.audio import devices

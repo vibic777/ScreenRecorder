@@ -18,4 +18,12 @@ def video_options(file_format, quality, fps):
 
 
 def container_options(file_format):
-    return ["-movflags", "+frag_keyframe+empty_moov+default_base_moof"] if file_format == "mp4" else []
+    if file_format != "mp4":
+        return []
+    # Qt5/WMF on Windows 8.1 is unreliable with fragmented MP4.  Keep the
+    # streaming-friendly container for Qt6, but write a regular MP4 for the
+    # legacy player so it can open recordings through QMediaPlayer.
+    if os.environ.get("SCREENREC_QT") == "PySide2":
+        return []
+    return ["-movflags", "+frag_keyframe+empty_moov+default_base_moof"]
+import os

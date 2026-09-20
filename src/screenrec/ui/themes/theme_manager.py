@@ -1,6 +1,6 @@
 """One registry controls application styling and both runtime icons."""
 from pathlib import Path
-from PySide6.QtGui import QIcon, QPalette, QColor
+from screenrec.qt.QtGui import QIcon, QPalette, QColor
 
 ROOT = Path(__file__).resolve().parent
 THEMES = {

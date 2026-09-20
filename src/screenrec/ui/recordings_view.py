@@ -1,11 +1,12 @@
 """Local recordings catalogue and Qt Multimedia playback."""
 from datetime import datetime
 from pathlib import Path
-from PySide6.QtCore import Qt,QUrl,QRectF
-from PySide6.QtGui import QShortcut,QKeySequence,QDesktopServices,QPainter,QColor
-from PySide6.QtMultimedia import QMediaPlayer,QAudioOutput,QMediaMetaData
-from PySide6.QtMultimediaWidgets import QVideoWidget
-from PySide6.QtWidgets import (QWidget,QVBoxLayout,QHBoxLayout,QPushButton,QLabel,QSlider,
+from screenrec.qt.QtCore import Qt,QUrl,QRectF
+from screenrec.qt.QtGui import QShortcut,QKeySequence,QDesktopServices,QPainter,QColor
+from screenrec.qt.QtMultimedia import QMediaPlayer,QAudioOutput,QMediaMetaData
+from screenrec.qt.QtMultimediaWidgets import QVideoWidget
+from screenrec.qt import BACKEND
+from screenrec.qt.QtWidgets import (QWidget,QVBoxLayout,QHBoxLayout,QPushButton,QLabel,QSlider,
  QLineEdit,QComboBox,QSplitter,QTreeWidget,QTreeWidgetItem,QDialog,QFileDialog,QStyle,QStackedWidget,
  QMessageBox,QApplication,QLineEdit,QPlainTextEdit,QAbstractSpinBox,QComboBox)
 from screenrec.logger.logger import get_logger
@@ -154,17 +155,33 @@ class RecordingsView(QWidget):
         self.splitter.addWidget(self.pane)
         self.splitter.setSizes([350,500])
         self.player=QMediaPlayer(self)
-        self.audio=QAudioOutput(self)
+        self.audio=QAudioOutput(self) if BACKEND == "PySide6" else QAudioOutput()
         self.audio.setVolume(.7)
-        self.player.setAudioOutput(self.audio)
+        if BACKEND == "PySide6":
+            self.player.setAudioOutput(self.audio)
+        else:
+            self.player.setAudioOutput(self.audio) if hasattr(self.player, "setAudioOutput") else None
         self.player.setVideoOutput(self.video)
         self.player.mediaStatusChanged.connect(self.media_status)
-        self.player.errorOccurred.connect(self.media_error)
+        (self.player.errorOccurred if hasattr(self.player, "errorOccurred") else self.player.error).connect(self.media_error)
         self.player.durationChanged.connect(self.duration_changed)
         self.player.positionChanged.connect(self.position_changed)
-        self.player.playbackStateChanged.connect(self.state_changed)
+        (self.player.playbackStateChanged if hasattr(self.player, "playbackStateChanged") else self.player.stateChanged).connect(self.state_changed)
         self.player.metaDataChanged.connect(self.metadata_changed)
-        self.video.videoSink().videoFrameChanged.connect(self.frame_changed)
+        if hasattr(self.video, "videoSink"):
+            self.video.videoSink().videoFrameChanged.connect(self.frame_changed)
+            self.video_probe = None
+        else:
+            self.video_probe = None
+            try:
+                from screenrec.qt.QtMultimedia import QVideoProbe
+                self.video_probe = QVideoProbe(self)
+                self.video_probe.videoFrameProbed.connect(self.frame_changed)
+                if not self.video_probe.setSource(self.player):
+                    log.warning("Qt5 video probe could not attach to player")
+                    self.video_probe = None
+            except (ImportError, AttributeError, RuntimeError):
+                log.exception("Qt5 video probe initialization failed")
         self.timeline.sliderReleased.connect(lambda:self.player.setPosition(self.timeline.value()))
         self.timeline.sliderMoved.connect(lambda p:self.time.setText(clock_text(p)+" / "+clock_text(self.player.duration())))
         self.play.clicked.connect(self.toggle_play)
@@ -230,7 +247,7 @@ class RecordingsView(QWidget):
             self.load(Path(selected))
         if self.current and not self.current.exists():
             self.stop_playback()
-            self.player.setSource(QUrl())
+            self._set_source(QUrl())
             self.current=None
             self.frame_image=None
             self.first_image=None
@@ -255,35 +272,43 @@ class RecordingsView(QWidget):
         self.info.setText(self.current.name)
         self.delete.setEnabled(not self.recording)
         self.priming=not self.recording
-        self.audio.setMuted(True)
-        self.player.setSource(QUrl.fromLocalFile(str(self.current)))
+        self._set_muted(True)
+        self._set_source(QUrl.fromLocalFile(str(self.current)))
         log.debug("Player source loaded: %s",self.current)
     def media_status(self,status):
-        if status==QMediaPlayer.MediaStatus.LoadedMedia:
+        media_status = getattr(QMediaPlayer, "MediaStatus", QMediaPlayer)
+        loaded = getattr(media_status, "LoadedMedia", None)
+        invalid = getattr(media_status, "InvalidMedia", None)
+        ended = getattr(media_status, "EndOfMedia", None)
+        log.debug("Player media status: file=%s status=%s", self.current, status)
+        if status==loaded:
             self.metadata_changed()
             if self.priming or self.wanted_play:
                 self.player.play()
-        elif status==QMediaPlayer.MediaStatus.InvalidMedia:
+        elif status==invalid:
             self.media_error()
-        elif status==QMediaPlayer.MediaStatus.EndOfMedia:
+        elif status==ended:
             self.wanted_play=False
     def frame_changed(self,frame):
         if not frame.isValid():
             return
-        self.frame_image=frame.toImage()
+        image = frame.toImage() if hasattr(frame, "toImage") else frame.image()
+        if image is None or image.isNull():
+            return
+        self.frame_image=image
         if self.first_image is None:
             self.first_image=self.frame_image
         self.paused_frame.update()
         if self.priming:
             self.priming=False
             self.player.pause()
-            self.audio.setMuted(self.user_muted)
+            self._set_muted(self.user_muted)
     def toggle_play(self):
         if self.recording or not self.current:
             return
         self.priming=False
-        self.audio.setMuted(self.user_muted)
-        if self.player.playbackState()==QMediaPlayer.PlaybackState.PlayingState:
+        self._set_muted(self.user_muted)
+        if self._is_playing():
             self.wanted_play=False
             self.player.pause()
         else:
@@ -312,7 +337,7 @@ class RecordingsView(QWidget):
             self.list.setCurrentItem(items[index])
     def set_muted(self,value):
         self.user_muted=value
-        self.audio.setMuted(value or self.priming)
+        self._set_muted(value or self.priming)
         self.mute.setText(self.t("player.muted") if value else self.t("player.sound"))
     def duration_changed(self,value):
         self.timeline.setRange(0,min(value,2147483647))
@@ -322,23 +347,34 @@ class RecordingsView(QWidget):
             self.timeline.setValue(value)
             self.time.setText(clock_text(value)+" / "+clock_text(self.player.duration()))
     def state_changed(self,state):
-        self.screen.setCurrentIndex(0 if state==QMediaPlayer.PlaybackState.PlayingState else 1)
+        playing = getattr(getattr(QMediaPlayer, "PlaybackState", QMediaPlayer), "PlayingState")
+        self.screen.setCurrentIndex(0 if state==playing else 1)
         self.paused_frame.update()
-        icon=QStyle.StandardPixmap.SP_MediaPause if state==QMediaPlayer.PlaybackState.PlayingState else QStyle.StandardPixmap.SP_MediaPlay
+        icon=QStyle.StandardPixmap.SP_MediaPause if state==playing else QStyle.StandardPixmap.SP_MediaPlay
         self.play.setIcon(self.style().standardIcon(icon))
+    def _is_playing(self):
+        state=self.player.playbackState() if hasattr(self.player,"playbackState") else self.player.state()
+        playing=getattr(getattr(QMediaPlayer,"PlaybackState",QMediaPlayer),"PlayingState")
+        return state==playing
     def metadata_changed(self):
-        if self.player.error()!=QMediaPlayer.Error.NoError:
-            return
-        if not self.current:
-            return
-        size=self.player.metaData().value(QMediaMetaData.Key.Resolution)
-        resolution=f" • {size.width()} × {size.height()}" if size and hasattr(size,"width") else ""
-        self.info.setText(self.current.name+resolution)
+        try:
+            if self.player.error()!=QMediaPlayer.Error.NoError or not self.current:
+                return
+            key = QMediaMetaData.Key.Resolution
+            # Qt6 exposes a metadata object; Qt5 exposes metaData(key).
+            metadata = self.player.metaData() if BACKEND == "PySide6" else None
+            size = metadata.value(key) if metadata is not None else self.player.metaData(key)
+            resolution=f" • {size.width()} × {size.height()}" if size and hasattr(size,"width") else ""
+            self.info.setText(self.current.name+resolution)
+        except (TypeError, AttributeError, RuntimeError) as exc:
+            log.debug("Player metadata unavailable: file=%s error=%s", self.current, exc)
     def media_error(self,*_):
         self.priming=False
         self.wanted_play=False
         self.info.setText(self.t("player.playback_error") + " "+self.player.errorString())
-        log.error("Playback failed: %s",self.player.errorString())
+        status = self.player.mediaStatus()
+        error = self.player.error()
+        log.error("Playback failed: file=%s error=%s status=%s message=%r", self.current, error, status, self.player.errorString())
     def toggle_fullscreen(self):
         if self.fullscreen:
             self.leave_fullscreen()
@@ -377,7 +413,7 @@ class RecordingsView(QWidget):
         if answer != QMessageBox.StandardButton.Yes:
             return
         self.stop_playback()
-        self.player.setSource(QUrl())
+        self._set_source(QUrl())
         try:
             path.unlink()
         except OSError as exc:
@@ -396,7 +432,7 @@ class RecordingsView(QWidget):
         self.translator=Translator(language)
         self.folder.setText(str(self.directory))
         self.stop_playback()
-        self.player.setSource(QUrl())
+        self._set_source(QUrl())
         self.current=None
         self.frame_image=None
         self.first_image=None
@@ -420,4 +456,17 @@ class RecordingsView(QWidget):
     def shutdown(self):
         self.leave_fullscreen()
         self.stop_playback()
-        self.player.setSource(QUrl())
+        self._set_source(QUrl())
+
+    def _set_source(self, url):
+        if hasattr(self.player, "setSource"):
+            self.player.setSource(url)
+        else:
+            from screenrec.qt.QtMultimedia import QMediaContent
+            self.player.setMedia(QMediaContent(url))
+
+    def _set_muted(self, value):
+        if hasattr(self.audio, "setMuted"):
+            self.audio.setMuted(value)
+        elif hasattr(self.player, "setMuted"):
+            self.player.setMuted(value)

@@ -1,6 +1,6 @@
-from PySide6.QtCore import Signal
+from screenrec.qt.QtCore import Signal
 from ..localization import Translator
-from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+from screenrec.qt.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                               QLabel, QComboBox, QPushButton, QLineEdit, QCheckBox, QTabWidget, QScrollArea)
 from ..version import __version__
 

@@ -1,7 +1,7 @@
 """Render text literally with Qt, then use a fixed FFmpeg filter graph."""
 from pathlib import Path
-from PySide6.QtCore import Qt, QRectF
-from PySide6.QtGui import QImage, QImageReader, QPainter, QColor, QFont
+from screenrec.qt.QtCore import Qt, QRectF
+from screenrec.qt.QtGui import QImage, QImageReader, QPainter, QColor, QFont
 from screenrec.config.templates import validate
 from screenrec.logger.logger import get_logger
 log = get_logger(__name__)

@@ -10,7 +10,7 @@ from pathlib import Path
 from screenrec.config.filenames import reserve
 from urllib.parse import urlsplit, parse_qs
 
-from PySide6.QtCore import QThread, Signal
+from screenrec.qt.QtCore import QThread, Signal
 from imageio_ffmpeg import get_ffmpeg_exe
 from screenrec.config.recording import video_options
 from .audio import AudioSession

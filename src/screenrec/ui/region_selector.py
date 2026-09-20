@@ -1,6 +1,6 @@
-from PySide6.QtCore import Qt, QRect, QPoint
-from PySide6.QtGui import QColor, QPainter, QPen
-from PySide6.QtWidgets import QDialog
+from screenrec.qt.QtCore import Qt, QRect, QPoint
+from screenrec.qt.QtGui import QColor, QPainter, QPen
+from screenrec.qt.QtWidgets import QDialog
 from screenrec.localization import Translator
 
 
@@ -54,7 +54,7 @@ class RegionSelector(QDialog):
     def mousePressEvent(self, event):
         if event.button() != Qt.MouseButton.LeftButton:
             return
-        self.anchor = event.position().toPoint()
+        self.anchor = event.position().toPoint() if hasattr(event,"position") else event.pos()
         self.original = QRect(self.selection)
         if (self.anchor-self.selection.bottomRight()).manhattanLength() < 20:
             self.drag_mode = "resize"
@@ -68,7 +68,7 @@ class RegionSelector(QDialog):
     def mouseMoveEvent(self, event):
         if self.anchor is None:
             return
-        point = event.position().toPoint()
+        point = event.position().toPoint() if hasattr(event,"position") else event.pos()
         point.setX(max(0, min(self.width()-1, point.x())))
         point.setY(max(0, min(self.height()-1, point.y())))
         if self.drag_mode == "move":
@@ -96,7 +96,7 @@ class RegionSelector(QDialog):
 
 def screen_for_monitor(monitor, index, language="en"):
     import platform
-    from PySide6.QtGui import QGuiApplication
+    from screenrec.qt.QtGui import QGuiApplication
     screens = QGuiApplication.screens()
     if platform.system() == "Windows":
         import ctypes
