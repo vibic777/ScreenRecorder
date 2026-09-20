@@ -7,6 +7,6 @@ Two Windows x64 builds are included:
 
 This release adds the Legacy port, fixes Qt5 playback compatibility and Windows multimedia plugin packaging, improves overlay preparation and text preview, and adds diagnostics around capture, encoding, and playback.
 
-SHA-256 checksums for both executables are attached as `SHA256SUMS.txt`. The Legacy executable is provided for compatibility testing on Windows 8/8.1; test all capture sources and audio modes on the target system before production use.
+SHA-256 checksums for both executables are attached as `SHA256SUMS.txt`. User verification: Modern was tested on Windows 10/11 and Legacy on Windows 8.1. Check the required capture sources and audio modes in your own environment before production use.
 
-Validation on the Windows 11 build host: 48 tests and 9 subtests pass; both standalone EXEs pass synthetic recording, overlay, logging, and player self-tests. A native Windows 8/8.1 VM was not available, so Legacy still needs target-OS verification.
+Validation: 48 tests and 9 subtests pass on the Windows 11 build host; both standalone EXEs pass synthetic recording, overlay, logging, and player self-tests. In addition, the user verified Modern on Windows 10/11 and Legacy on Windows 8.1.

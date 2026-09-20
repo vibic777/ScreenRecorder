@@ -5,7 +5,7 @@ This release publishes two Windows x64 executables:
 - `ScreenRec-0.9.3-Windows10-11-x64.exe` — Modern, Python 3.13/PySide6, Windows 10 1809+ and Windows 11.
 - `ScreenRec-0.9.3-Windows8-8.1-x64.exe` — Legacy, Python 3.8/PySide2, Windows 8/8.1.
 
-Local build outputs are `dist/modern/ScreenRec.exe` and `dist/legacy/ScreenRec.exe`. Python and a separate FFmpeg installation are not needed to run either executable. Legacy is a compatibility build; test the required capture sources and audio modes on the target Windows 8/8.1 machine.
+Local build outputs are `dist/modern/ScreenRec.exe` and `dist/legacy/ScreenRec.exe`. Python and a separate FFmpeg installation are not needed to run either executable. User verification for 0.9.3: Modern on Windows 10/11 and Legacy on Windows 8.1. Check the required capture sources and audio modes in your own environment before production use.
 
 ## Validation
 

@@ -18,6 +18,8 @@
 
 Выпуск 0.9.3 содержит две сборки: Modern для Windows 10/11 x64 и Legacy для Windows 8/8.1 x64. EXE доступны на странице GitHub Releases; сверяйте SHA-256 с приложенным файлом контрольных сумм. Локальные сборки: `dist/modern/ScreenRec.exe` и `dist/legacy/ScreenRec.exe`. Python, venv и отдельный FFmpeg для запуска не нужны.
 
+Пользователь проверил Modern на Windows 10/11, а Legacy — на Windows 8.1.
+
 Для разработки и запуска из исходников нужен Python 3.11 или новее. Первый запуск:
 
 ```bat

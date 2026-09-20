@@ -29,6 +29,8 @@ ScreenRec records locally and does not upload recordings, logs, tab contents, ov
 
 Version 0.9.3 provides separate Modern (Windows 10/11) and Legacy (Windows 8/8.1) executables. Verify downloaded release assets against the attached SHA-256 checksums.
 
+User-verified: Modern on Windows 10/11; Legacy on Windows 8.1.
+
 ## Modern build, profiles and cleanup
 
 The Modern track uses Python 3.13 x64 and PySide6/Qt 6 for Windows 10/11. The Legacy track uses Python 3.8 x64 and PySide2/Qt 5 for Windows 8/8.1.
