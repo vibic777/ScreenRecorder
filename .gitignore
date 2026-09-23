@@ -49,3 +49,8 @@ logs/
 .DS_Store
 Thumbs.db
 .venv-legacy/
+
+# IDE / agent
+.idea/
+.vscode/
+.cursor/
