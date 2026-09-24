@@ -448,3 +448,12 @@ Qt Multimedia: QMediaPlayer/QAudioOutput/QVideoWidget, первый кадр б�
 Перед записью видео плеер останавливается и блокируется, чтобы исключить его звук из захвата. При смене вкладки на запись и закрытии в трей также останавливается. При выходе освобождаются источник и полноэкранное окно. Ошибки плеера показываются в панели и логируются, приложение не закрывается. Компоненты Qt Multimedia должны включаться в один EXE и проверяться реальным воспроизведением внутри сборки. 25 автотестов и self-test с полем player в отчёте/манифесте; Linux требует отдельной проверки. Обязательны документация, локальный коммит и релиз; публикация без команды запрещена.
 
 Актуальный выпуск 0.9.3 включает два Windows-профиля: Modern Python 3.13/PySide6 для Windows 10/11, Legacy Python 3.8/PySide2 для Windows 8/8.1. Сборки: `scripts/build_modern.bat` → `dist/modern/ScreenRec.exe`, `scripts/build_legacy.bat` → `dist/legacy/ScreenRec.exe`. Legacy использует ImageGrab вместо Windows Graphics Capture; Qt5 playback plugins поставляются в EXE. Публиковать бинарники как GitHub Release assets и прикладывать SHA256SUMS, не добавлять EXE в историю Git. Сверху этого документа сохраняются исторические требования, но фактическое текущее поведение и пользовательские решения описывает этот раздел и раздел README.
+
+## 25. Текущее состояние (актуализировано 2026-09-24)
+
+- Окружения: Modern — `.venv` на Python 3.13 x64 (`scripts/setup_venv_windows.bat`, `py -3.13`); Legacy — `.venv-legacy` на Python 3.8 x64 (`scripts/setup_venv_legacy.bat`, `py -3.8`). Требование «Python 3.11+» из §2 относится только к Modern/Linux; `pyproject.toml` описывает Modern-пакет.
+- Выбор Qt — только через `screenrec.qt` (`SCREENREC_QT=PySide6|PySide2`); прямые импорты PySide в коде приложения запрещены. Код должен оставаться совместимым с Python 3.8 (аннотации нового вида — только с `from __future__ import annotations`).
+- Отличия Legacy: захват окна — Pillow ImageGrab по прямоугольнику окна (перекрытия попадают в кадр, свёрнутое окно не пишется) вместо Windows Graphics Capture; MP4 без фрагментации; Qt5 Multimedia plugins добавляются в EXE явно.
+- Тем семь: green, blue, orange, pink, purple, gray, black; по умолчанию gray. Требование §7/§20 о четырёх темах историческое.
+- pytest выполняется в `.venv`; Legacy проверяется import-smoke с `SCREENREC_QT=PySide2` и ручной проверкой EXE на Windows 8/8.1. `scripts/release_windows.bat` собирает только Modern.
+- Автор коммитов и тегов в репозитории — `vibic777 <vibic777@users.noreply.github.com>`; других контрибьюторов в истории нет.
