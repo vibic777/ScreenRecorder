@@ -1,4 +1,5 @@
 """XComposite window pixmap capture on X11; no desktop substitution."""
+from screenrec.localization import tr
 import os
 from contextlib import closing
 from .screen import check_platform
@@ -40,7 +41,7 @@ class WindowSource:
         self.connection = display.Display()
         try:
             if not self.connection.has_extension("Composite"):
-                raise RuntimeError("XComposite недоступен; захват отдельного окна невозможен.")
+                raise RuntimeError(tr("error.x11_no_composite"))
             self.window = self.connection.create_resource_object("window", self.target["hwnd"])
             self.pixmap = self.window.composite_name_window_pixmap()
             geometry = self.pixmap.get_geometry()
@@ -48,19 +49,19 @@ class WindowSource:
             return self
         except Exception:
             self.__exit__()
-            raise RuntimeError("Окно X11 недоступно. Нужны развёрнутое окно и работающий композитор XComposite.")
+            raise RuntimeError(tr("error.x11_window_unavailable"))
 
     def grab(self):
         from Xlib import X
         attrs = self.window.get_attributes()
         geometry = self.window.get_geometry()
         if attrs.map_state != X.IsViewable:
-            raise RuntimeError("X11 не предоставляет изображение свёрнутого окна.")
+            raise RuntimeError(tr("error.x11_minimized"))
         if (geometry.width, geometry.height) != (self.width, self.height):
-            raise RuntimeError("Размер окна X11 изменился. Запустите запись заново.")
+            raise RuntimeError(tr("error.x11_resized"))
         image = self.pixmap.get_image(0, 0, self.width, self.height, X.ZPixmap, 0xffffffff)
         if len(image.data) != self.width * self.height * 4:
-            raise RuntimeError("Неподдерживаемый формат пикселей X11 (требуется BGRA32).")
+            raise RuntimeError(tr("error.x11_pixel_format"))
         return image.data
 
     def __exit__(self, *_):

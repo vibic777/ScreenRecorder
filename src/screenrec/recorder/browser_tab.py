@@ -1,4 +1,5 @@
 """Authenticated, loopback-only bridge for the bundled tabCapture extension."""
+from screenrec.localization import tr
 import hmac
 import json
 import secrets
@@ -112,7 +113,7 @@ class TabSession:
                                 self.reply(409, {"error": "Session not ready or already recording"})
                                 return
                             value = json.loads(body)
-                            session.title = str(value.get("title", "Вкладка"))[:250]
+                            session.title = str(value.get("title", tr("error.tab_default_title")))[:250]
                             session.origin = time.monotonic()
                             session.started.set()
                         elif parsed.path == "/chunk":
@@ -136,7 +137,7 @@ class TabSession:
                             session.ended.set()
                         elif parsed.path == "/abort":
                             value = json.loads(body)
-                            session.error = str(value.get("error", "Захват вкладки прерван."))[:1000]
+                            session.error = str(value.get("error", tr("error.tab_capture_stopped")))[:1000]
                             session.ended.set()
                         else:
                             self.reply(404, {})
@@ -210,7 +211,7 @@ class BrowserWorker(QThread):
                 if session.error:
                     raise RuntimeError(session.error)
                 if time.monotonic() > deadline:
-                    raise RuntimeError("Вкладка не подключена за 5 минут. Начните сеанс заново.")
+                    raise RuntimeError(tr("error.tab_connect_timeout"))
             if audio:
                 audio.start(session.origin)
             log.info("Browser connected; tab capture active")
@@ -224,9 +225,9 @@ class BrowserWorker(QThread):
                     session.stop_requested = True
                     stop_deadline = stop_deadline or time.monotonic() + 15
                     if time.monotonic() > stop_deadline:
-                        raise RuntimeError("Расширение не завершило передачу вкладки. Промежуточный WebM сохранён.")
+                        raise RuntimeError(tr("error.tab_incomplete"))
                 if time.monotonic() - session.last_contact > 20:
-                    raise RuntimeError("Связь с расширением потеряна. Промежуточный WebM сохранён.")
+                    raise RuntimeError(tr("error.tab_disconnected"))
             duration = time.monotonic() - session.origin
             if session.error:
                 raise RuntimeError(session.error)
@@ -238,7 +239,7 @@ class BrowserWorker(QThread):
             session.close()
             session = self.session = None
             if raw.stat().st_size == 0:
-                raise RuntimeError("Браузер не передал видео.")
+                raise RuntimeError(tr("error.tab_no_video"))
             log.debug("Browser transfer complete; encoding received video")
             video = parts / f"video.{self.settings.file_format}" if tracks else output
             from .overlay import prepare, ffmpeg_options
@@ -289,4 +290,4 @@ class BrowserWorker(QThread):
                 except OSError:
                     pass
             if error:
-                self.failed.emit(f"{error}\nПромежуточные файлы: {parts}" if parts else error)
+                self.failed.emit(error + "\n" + tr("error.parts_kept", path=parts) if parts else error)

@@ -1,5 +1,6 @@
 """Portable, versioned settings profile format."""
 from __future__ import annotations
+from screenrec.localization import tr
 import json
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -36,12 +37,12 @@ def load_profile(path: Path, *, fallback=True) -> Settings:
     try:
         document = json.loads(Path(path).read_text(encoding="utf-8"))
         if not isinstance(document, dict) or document.get("kind") != PROFILE_KIND:
-            raise ValueError("invalid profile kind")
+            raise ValueError(tr("error.profile_kind"))
         if document.get("schema_version") != PROFILE_SCHEMA_VERSION:
-            raise ValueError("unsupported profile schema")
+            raise ValueError(tr("error.profile_schema"))
         data = document.get("settings")
         if not isinstance(data, dict):
-            raise ValueError("invalid profile settings")
+            raise ValueError(tr("error.profile_settings"))
     except (OSError, ValueError, TypeError, json.JSONDecodeError):
         if not fallback:
             raise

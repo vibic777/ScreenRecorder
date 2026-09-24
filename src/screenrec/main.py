@@ -1,3 +1,4 @@
+from screenrec.localization import tr, set_language
 import signal
 import sys
 import traceback
@@ -40,15 +41,8 @@ def profile_path_from_args(argv):
         return None
     index = argv.index("--profile")
     if index + 1 >= len(argv) or argv[index + 1].startswith("--"):
-        raise SystemExit("Параметр --profile требует путь к файлу профиля")
+        raise SystemExit(tr("error.profile_argument"))
     return Path(argv[index + 1]).expanduser()
-
-def qt_runtime_error(exc):
-    return (f"ScreenRec cannot start because Qt/PySide could not be loaded.\\n"
-            f"Windows: {platform.platform()} ({platform.machine()})\\n"
-            f"Cause: {exc}\\n\\n"
-            "Use the supported 64-bit Windows 10 1809+ or Windows 11 build, "
-            "and install the Microsoft Visual C++ runtime if required.")
 
 def show_runtime_error(message):
     if platform.system() == "Windows":
@@ -64,11 +58,11 @@ def main():
     multiprocessing.freeze_support()
     log.trace("Process entrypoint started")
     if not getattr(sys, "frozen", False) and sys.prefix == sys.base_prefix:
-        raise SystemExit("Запустите ScreenRec внутри .venv: python -m screenrec.main")
+        raise SystemExit(tr("error.venv_required"))
     if "--profile" in sys.argv:
         index = sys.argv.index("--profile")
         if index + 1 >= len(sys.argv) or sys.argv[index + 1].startswith("--"):
-            raise SystemExit("Параметр --profile требует путь к файлу профиля")
+            raise SystemExit(tr("error.profile_argument"))
         profile_path = Path(sys.argv[index + 1]).expanduser()
     else:
         profile_path = None
@@ -82,6 +76,7 @@ def main():
     from .config.settings import Settings
     from .config.profiles import load_profile, load_default_profile
     startup_settings = load_profile(profile_path) if profile_path else (load_default_profile() or Settings.load())
+    set_language(startup_settings.language)
     # Configure diagnostics before locking and constructing the UI, so startup
     # failures (including a stale lock) are written to the EXE directory.
     from .logger.logger import configure as configure_log, LEVELS
@@ -93,7 +88,7 @@ def main():
         instance_lock = acquire_instance_lock()
         if not instance_lock:
             log.warning("Second instance rejected by lock")
-            show_runtime_error("ScreenRec уже запущен. Разрешите несколько копий в настройках, если это необходимо.")
+            show_runtime_error(tr("error.already_running"))
             return 1
     log.debug("Instance lock acquired or multiple instances allowed")
     application.setApplicationName("ScreenRec")
@@ -104,7 +99,7 @@ def main():
         from screenrec.qt.QtWidgets import QMessageBox
         get_logger(__name__).fatal_error("Application startup failed",exc_info=True)
         close_log()
-        QMessageBox.critical(None,"ScreenRec","Не удалось запустить приложение: " + str(exc))
+        QMessageBox.critical(None,"ScreenRec",tr("error.startup_failed", error=exc))
         return 1
 
     def shutdown(*_):

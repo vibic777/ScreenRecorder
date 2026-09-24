@@ -1,3 +1,4 @@
+from screenrec.localization import tr
 import subprocess
 from imageio_ffmpeg import get_ffmpeg_exe
 from screenrec.config.recording import container_options
@@ -23,4 +24,4 @@ def mux_audio(video, tracks, output, settings, duration):
                             stderr=subprocess.PIPE, timeout=max(120, duration),
                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     if result.returncode:
-        raise RuntimeError(result.stderr.decode("utf-8", errors="replace") or "Не удалось добавить звук.")
+        raise RuntimeError(result.stderr.decode("utf-8", errors="replace") or tr("error.mux_failed"))

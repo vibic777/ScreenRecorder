@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from PySide6.QtWidgets import QApplication
 from screenrec.logger.logger import configure,shutdown,hub,get_logger,LEVELS,get_default_log_path
 from screenrec.config.settings import Settings
+from screenrec.localization import tr
 from screenrec.ui.logging_dialog import LoggingDialog
 
 class LoggingTests(TestCase):
@@ -71,7 +72,7 @@ class LoggingTests(TestCase):
             with patch.object(hub.file,"emit",side_effect=OSError("disk full")):
                 log.info("failure")
             self.assertIsNone(hub.file)
-            self.assertIn("отключена",hub.take_problem())
+            self.assertEqual(hub.take_problem(),tr("error.log_write_disabled"))
             self.assertIsNone(hub.take_problem())
     def test_fallback_default_location_and_dialog(self):
         with TemporaryDirectory() as directory:

@@ -1,4 +1,5 @@
 """Process-wide, runtime-switchable logging with exact level selection."""
+from screenrec.localization import tr
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -49,7 +50,7 @@ class Hub(logging.Handler):
             self.file.emit(record)
         except Exception:
             self.stop()
-            self.problem = "Запись лога отключена: ошибка записи или ротации. Проверьте место и права доступа."
+            self.problem = tr("error.log_write_disabled")
     def configure(self,enabled,path,levels):
         with self.lock:
             self.stop()
@@ -71,11 +72,11 @@ class Hub(logging.Handler):
                     self.file = FileHandler(candidate, maxBytes=5*1024*1024, backupCount=3, encoding="utf-8")
                     self.file.setFormatter(Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s",datefmt="%Y-%m-%d %H:%M:%S"))
                     self.actual_path = candidate
-                    warning = None if candidate == requested else "Выбранный путь недоступен. Лог записывается по пути по умолчанию: " + str(candidate)
+                    warning = None if candidate == requested else tr("error.log_fallback_path", path=candidate)
                     return candidate, warning
                 except (OSError,ValueError):
                     self.stop()
-            return None, "Логирование отключено: выбранный путь и путь по умолчанию недоступны. Выберите существующую папку с правом записи."
+            return None, tr("error.log_unavailable")
     def take_problem(self):
         with self.lock:
             problem,self.problem = self.problem,None

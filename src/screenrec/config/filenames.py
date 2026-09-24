@@ -4,19 +4,18 @@ from pathlib import Path
 from uuid import uuid4
 import unicodedata
 
+from screenrec.localization import tr
+
+# Display labels live in the locales: filename.date.<key>, filename.time.<key>.
 DATE_FORMATS = {
-    "ymd": ("Год-месяц-день (2026-09-13)", "%Y-%m-%d"),
-    "dmy": ("День-месяц-год (13-09-2026)", "%d-%m-%Y"),
-    "mdy": ("Месяц-день-год (09-13-2026)", "%m-%d-%Y"),
-    "dmy_dot": ("День.месяц.год (13.09.2026)", "%d.%m.%Y"),
-    "ymd_compact": ("ГодМесяцДень (20260913)", "%Y%m%d"),
-    "mdy_dot": ("Месяц.день.год (09.13.2026)", "%m.%d.%Y"),
+    "ymd": "%Y-%m-%d",
+    "dmy": "%d-%m-%Y",
+    "mdy": "%m-%d-%Y",
+    "dmy_dot": "%d.%m.%Y",
+    "ymd_compact": "%Y%m%d",
+    "mdy_dot": "%m.%d.%Y",
 }
-TIME_FORMATS = {
-    "24h": "24 часа: 18-05-09",
-    "12h": "12 часов: 06-05-09_PM",
-    "24h_compact": "24 часа без разделителей: 180509",
-}
+TIME_FORMATS = ("24h", "12h", "24h_compact")
 def clean_prefix(value):
     value = "".join("_" if c in '<>:"/\\|?*' or unicodedata.category(c).startswith("C") else c for c in value)
     value = value.strip(" .")[:80].rstrip(" .")
@@ -35,7 +34,7 @@ def filename(settings, moment=None, identifier=None):
     moment = moment or datetime.now()
     parts = [clean_prefix(settings.filename_prefix)]
     if settings.filename_date:
-        pattern = DATE_FORMATS.get(settings.filename_date_format,DATE_FORMATS["ymd"])[1]
+        pattern = DATE_FORMATS.get(settings.filename_date_format,DATE_FORMATS["ymd"])
         parts.append(moment.strftime(pattern))
     if settings.filename_time:
         mode = settings.filename_time_format
@@ -47,7 +46,7 @@ def filename(settings, moment=None, identifier=None):
         parts.append(str(identifier or uuid4()))
     stem = "_".join(part for part in parts if part) or "ScreenRec"
     if settings.file_format not in ("mp4","mkv","webm"):
-        raise ValueError("Неизвестный формат файла.")
+        raise ValueError(tr("error.filename_unknown_format"))
     return stem + "." + settings.file_format
 
 def reserve(directory, settings):
@@ -68,4 +67,4 @@ def reserve(directory, settings):
             lock.rmdir()
             continue
         return path, lock
-    raise RuntimeError("Не удалось выбрать свободное имя. Измените префикс или включите UUID.")
+    raise RuntimeError(tr("error.filename_no_free_name"))

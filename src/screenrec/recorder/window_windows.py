@@ -1,3 +1,4 @@
+from screenrec.localization import tr
 import ctypes
 from ctypes import wintypes as wt
 import os
@@ -55,7 +56,7 @@ class WindowSource:
         hwnd = self.target["hwnd"]
         user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
         if not user32.IsWindow(hwnd) or pid.value != self.target["pid"]:
-            raise RuntimeError("Выбранное окно закрыто. Выберите окно заново.")
+            raise RuntimeError(tr("error.window_closed"))
 
     def __enter__(self):
         if os.environ.get("SCREENREC_QT") == "PySide2":
@@ -66,7 +67,7 @@ class WindowSource:
             rect = wt.RECT()
             user32.GetWindowRect(self.target["hwnd"], ctypes.byref(rect))
             if rect.right <= rect.left or rect.bottom <= rect.top:
-                raise RuntimeError("У выбранного окна недоступный размер.")
+                raise RuntimeError(tr("error.window_size"))
             self.legacy_grab = ImageGrab
             self.legacy_rect = (rect.left, rect.top, rect.right, rect.bottom)
             self.width = rect.right - rect.left
@@ -75,7 +76,7 @@ class WindowSource:
         from windows_capture import WindowsCapture
         self.validate()
         if user32.IsIconic(self.target["hwnd"]):
-            raise RuntimeError("Разверните выбранное окно перед началом записи.")
+            raise RuntimeError(tr("error.window_minimized"))
         self.capture = WindowsCapture(window_hwnd=self.target["hwnd"], cursor_capture=False)
         @self.capture.event
         def on_frame_arrived(frame, capture_control):
@@ -90,7 +91,7 @@ class WindowSource:
         self.control = self.capture.start_free_threaded()
         if not self.ready.wait(8) or self.frame is None:
             self.__exit__()
-            raise RuntimeError("Windows не предоставила кадр выбранного окна. Оно может быть защищено или недоступно.")
+            raise RuntimeError(tr("error.window_no_frame"))
         self.height, self.width = self.frame.shape[:2]
         return self
 
@@ -108,9 +109,9 @@ class WindowSource:
         import numpy as np
         self.validate()
         if self.closed:
-            raise RuntimeError("Источник окна закрылся.")
+            raise RuntimeError(tr("error.window_source_closed"))
         if user32.IsIconic(self.target["hwnd"]) and time.monotonic() - self.last_frame > 2:
-            raise RuntimeError("Windows приостановила кадры свёрнутого окна. Запись остановлена; разверните окно и начните снова.")
+            raise RuntimeError(tr("error.window_paused"))
         with self.lock:
             image = self.frame
         height, width = image.shape[:2]

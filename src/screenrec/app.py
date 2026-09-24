@@ -10,13 +10,13 @@ from screenrec.qt.QtWidgets import QFileDialog, QMessageBox, QSystemTrayIcon, QD
 
 from .config.settings import Settings
 from .config.profiles import save_profile, load_profile, load_default_profile
-from .localization import Translator, SUPPORTED_LANGUAGES
+from .localization import Translator, SUPPORTED_LANGUAGES, set_language as set_process_language
 from .recorder.screen import monitors
 from .recorder.worker import RecordingWorker
 from .ui.main_window import MainWindow
 from .ui.tray_menu import create_tray
 from .ui.settings_dialog import SettingsDialog
-from .config.recording import FORMATS, QUALITIES, AUDIO_MODES
+from .config.recording import FORMATS
 from .config.commands import COMMANDS, commands_for
 from .ui.sources import SourceController
 from .ui.themes.theme_manager import THEMES, apply_theme
@@ -31,6 +31,7 @@ class ScreenRecApp(SourceController, QObject):
         self.application = application
         self.settings = load_profile(profile_path) if profile_path else (load_default_profile() or Settings.load())
         self.translator = Translator(self.settings.language)
+        set_process_language(self.settings.language)
         # Temporary debug mode: keep every level enabled during active diagnostics.
         self.settings.logging_enabled = True
         self.settings.log_levels = list(LEVELS)
@@ -293,7 +294,8 @@ class ScreenRecApp(SourceController, QObject):
 
     def update_summary(self):
         self.window.recording_summary.setText(f"{FORMATS[self.settings.file_format]} • "
-            f"{QUALITIES[self.settings.quality]} • {AUDIO_MODES[self.settings.audio_mode]}")
+            f"{self.translator.tr('settings.quality.' + self.settings.quality)} • "
+            f"{self.translator.tr('settings.audio_mode.' + self.settings.audio_mode)}")
 
     def configure_recording(self):
         if self.worker:
@@ -400,7 +402,7 @@ class ScreenRecApp(SourceController, QObject):
                     try:
                         size = (monitor.get("width"), monitor.get("height"))
                         if not all(size):
-                            raise ValueError("Не удалось определить размер области для наложения.")
+                            raise ValueError(self.translator.tr("error.overlay_size"))
                         from tempfile import NamedTemporaryFile
                         import os
                         handle = NamedTemporaryFile(prefix="screenrec-overlay-", suffix=".png", delete=False)
@@ -411,7 +413,7 @@ class ScreenRecApp(SourceController, QObject):
                                  prepared_overlay_path, size[0], size[1])
                     except Exception as exc:
                         log.exception("Overlay preparation failed before recording")
-                        self.error("Не удалось подготовить наложение: " + str(exc))
+                        self.error(self.translator.tr("error.overlay_prepare", error=exc))
                         return
             self.worker = RecordingWorker(monitor, self.settings.output_dir, self.settings.fps, self,
                                           settings=worker_settings, overlay_path=prepared_overlay_path)

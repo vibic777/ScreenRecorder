@@ -27,12 +27,12 @@ class FilenameDialog(QDialog):
         self.time.setToolTip(self.t("tip.filename_time"))
         self.uuid.setToolTip(self.t("tip.filename_uuid"))
         self.date_format=QComboBox()
-        for key,(label,_) in DATE_FORMATS.items():
-            self.date_format.addItem(label,key)
+        for key in DATE_FORMATS:
+            self.date_format.addItem(self.t(f"filename.date.{key}"),key)
         self.date_format.setCurrentIndex(max(0,self.date_format.findData(settings.filename_date_format)))
         self.time_format=QComboBox()
-        for key,label in TIME_FORMATS.items():
-            self.time_format.addItem(label,key)
+        for key in TIME_FORMATS:
+            self.time_format.addItem(self.t(f"filename.time.{key}"),key)
         self.time_format.setCurrentIndex(max(0,self.time_format.findData(settings.filename_time_format)))
         form.addRow(self.t("filename.prefix"),self.prefix)
         form.addRow(self.date)

@@ -23,6 +23,7 @@ class SettingsDialog(QDialog):
         self.bitrate = self.combo({i: self.t("settings.bitrate").format(value=i) for i in (96, 128, 192, 256, 320)}, settings.audio_bitrate)
         self.allow_multiple_instances = QCheckBox(self.t("app.allow_multiple"))
         self.allow_multiple_instances.setChecked(settings.allow_multiple_instances)
+        self.allow_multiple_instances.setToolTip(self.t("tip.allow_multiple"))
         form.addRow(self.t("settings.format"), self.file_format)
         form.addRow(self.t("settings.video_quality"), self.quality)
         form.addRow(self.t("settings.fps"), self.fps)

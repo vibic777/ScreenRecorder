@@ -1,4 +1,5 @@
 """Render text literally with Qt, then use a fixed FFmpeg filter graph."""
+from screenrec.localization import tr
 from pathlib import Path
 from screenrec.qt.QtCore import Qt, QRectF
 from screenrec.qt.QtGui import QImage, QImageReader, QPainter, QColor, QFont
@@ -12,16 +13,16 @@ def enabled(template):
 def load_image(path):
     file = Path(path)
     if not file.is_file() or file.stat().st_size > 32 * 1024 * 1024:
-        raise ValueError("Картинка не найдена или превышает 32 МБ.")
+        raise ValueError(tr("error.overlay_image_missing"))
     reader = QImageReader(str(file))
     if bytes(reader.format()).lower() not in (b"png", b"jpeg", b"jpg", b"bmp", b"webp"):
-        raise ValueError("Используйте PNG, JPEG, BMP или WebP.")
+        raise ValueError(tr("error.overlay_image_type"))
     size = reader.size()
     if size.width() <= 0 or size.height() <= 0 or size.width()*size.height() > 32_000_000:
-        raise ValueError("Картинка должна содержать не более 32 миллионов пикселей.")
+        raise ValueError(tr("error.overlay_image_pixels"))
     image = reader.read()
     if image.isNull():
-        raise ValueError("Не удалось прочитать картинку.")
+        raise ValueError(tr("error.overlay_image_read"))
     return image
 
 def render(template, width, height, image=None):
@@ -63,7 +64,7 @@ def prepare(template, width, height, destination, image=None):
     log.debug("Preparing overlay layer: width=%s height=%s",width,height)
     try:
         if not render(template,width,height,image).save(str(destination),"PNG"):
-            raise RuntimeError("Не удалось сохранить слой наложения.")
+            raise RuntimeError(tr("error.overlay_layer_save"))
     except Exception:
         log.exception("Overlay preparation failed")
         raise

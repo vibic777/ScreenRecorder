@@ -1,4 +1,5 @@
 """Native audio isolated in processes so a stalled device can be stopped safely."""
+from screenrec.localization import tr
 import multiprocessing as mp
 import platform
 import queue
@@ -25,7 +26,7 @@ def _capture(kind, device_id, path, ready, gate, stop, result):
         import numpy as np
         import soundcard as sc
         if platform.system() not in ("Windows", "Linux"):
-            raise RuntimeError("Аудиозахват поддерживает Windows/WASAPI и Linux/PulseAudio.")
+            raise RuntimeError(tr("error.audio_platform"))
         if device_id:
             candidates = sc.all_microphones(include_loopback=True)
             device = next((d for d in candidates if str(d.id) == device_id and d.isloopback == (kind == "system")), None)
@@ -35,7 +36,7 @@ def _capture(kind, device_id, path, ready, gate, stop, result):
         else:
             device = sc.default_microphone()
         if device is None:
-            raise RuntimeError("Выбранное аудиоустройство недоступно. Откройте конфигуратор и выберите другое.")
+            raise RuntimeError(tr("error.audio_device_missing"))
         with device.recorder(samplerate=48000, blocksize=4800) as recorder, wave.open(str(path), "wb") as output:
             output.setnchannels(2)
             output.setsampwidth(2)
@@ -56,7 +57,7 @@ def _capture(kind, device_id, path, ready, gate, stop, result):
                 output.writeframesraw((np.clip(chunk, -1, 1) * 32767).astype("<i2").tobytes())
         result.put((str(path), started, None))
     except Exception as exc:
-        message = f"{kind}: {exc}"
+        message = tr("error.audio_source", source=tr(f"settings.audio_mode.{kind}"), error=exc)
         ready.put(message)
         result.put((str(path), 0, message))
 
@@ -92,7 +93,7 @@ class AudioSession:
                 try:
                     error = ready.get(timeout=15)
                 except queue.Empty:
-                    raise RuntimeError("Аудиоустройство не ответило за 15 секунд.")
+                    raise RuntimeError(tr("error.audio_timeout"))
                 if error:
                     raise RuntimeError(error)
         except Exception:
@@ -107,7 +108,7 @@ class AudioSession:
     def check(self):
         for process, _, _ in self.items:
             if process.exitcode is not None:
-                raise RuntimeError("Захват звука прерван. Проверьте аудиоустройство.")
+                raise RuntimeError(tr("error.audio_interrupted"))
 
     def finish(self, check=True):
         if self.finished:
@@ -126,7 +127,7 @@ class AudioSession:
                 if process.is_alive():
                     process.kill()
                     process.join()
-                errors.append("Аудиоустройство зависло; захват остановлен принудительно.")
+                errors.append(tr("error.audio_hung"))
             elif check:
                 try:
                     path, started, error = result.get(timeout=1)
@@ -135,7 +136,7 @@ class AudioSession:
                     else:
                         tracks.append((Path(path), max(0, started - self.origin)))
                 except queue.Empty:
-                    errors.append("Аудиоустройство не вернуло запись.")
+                    errors.append(tr("error.audio_no_result"))
             ready.close()
             result.close()
         log.debug("Audio capture finished: tracks=%s errors=%s",len(tracks),len(errors))

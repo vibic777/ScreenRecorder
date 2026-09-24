@@ -1,3 +1,4 @@
+from screenrec.localization import tr
 import threading
 import time
 import os
@@ -124,9 +125,9 @@ class RecordingWorker(QThread):
             except OSError:
                 pass
         if error:
-            suffix = f"\nФайл может быть неполным: {path}" if path and path.exists() else ""
+            suffix = "\n" + tr("error.file_incomplete", path=path) if path and path.exists() else ""
             if parts:
-                suffix += f"\nПромежуточные видео и звук сохранены: {parts}"
+                suffix += "\n" + tr("error.parts_saved", path=parts)
             self.failed.emit(error + suffix)
         elif frames:
             self.recording_saved.emit(str(path))

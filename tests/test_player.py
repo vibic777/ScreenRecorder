@@ -88,6 +88,21 @@ class PlayerTests(unittest.TestCase):
                 view.close()
                 self.app.processEvents()
 
+    def test_changing_directory_reloads_catalogue(self):
+        with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
+            self.make_video(Path(second)/"moved.mp4")
+            view=RecordingsView(first)
+            try:
+                self.assertEqual(view.list.topLevelItemCount(),0)
+                view.set_directory(second)
+                self.assertEqual(view.folder.text(),str(Path(second)))
+                self.assertEqual(view.list.topLevelItemCount(),1)
+                self.assertIsNone(view.current)
+            finally:
+                view.shutdown()
+                view.close()
+                self.app.processEvents()
+
     def test_audio_controls_and_invalid_file(self):
         import subprocess
         from imageio_ffmpeg import get_ffmpeg_exe

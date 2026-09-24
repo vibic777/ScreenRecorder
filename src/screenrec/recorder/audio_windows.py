@@ -1,4 +1,5 @@
 """Windows native WASAPI capture using device-native sample rates and channel counts."""
+from screenrec.localization import tr
 import json
 import queue
 import time
@@ -35,7 +36,7 @@ def capture(kind, device_id, path, ready, gate, stop, result):
             api = manager.get_host_api_info_by_type(pa.paWASAPI)
             device = manager.get_device_info_by_index(api["defaultInputDevice"])
         if device is None:
-            raise RuntimeError("Выбранное аудиоустройство недоступно. Обновите список в конфигураторе.")
+            raise RuntimeError(tr("error.audio_device_refresh"))
         rate, channels = int(device["defaultSampleRate"]), int(device["maxInputChannels"])
         chunks = queue.Queue(maxsize=200)
         overflow = []
@@ -65,7 +66,7 @@ def capture(kind, device_id, path, ready, gate, stop, result):
                 frames = 0
                 while not stop.is_set():
                     if overflow:
-                        raise RuntimeError("Аудиоустройство потеряло данные. Уменьшите нагрузку и повторите запись.")
+                        raise RuntimeError(tr("error.audio_overflow"))
                     try:
                         data = chunks.get(timeout=0.1)
                     except queue.Empty:

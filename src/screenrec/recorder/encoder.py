@@ -1,3 +1,4 @@
+from screenrec.localization import tr
 import subprocess
 import tempfile
 import threading
@@ -14,7 +15,7 @@ class Encoder:
 
     def __init__(self, path: Path, width: int, height: int, fps: int, file_format="mp4", quality="balanced", overlay=None, overlay_path=None):
         if path.exists():
-            raise FileExistsError(f"Файл уже существует: {path}")
+            raise FileExistsError(tr("error.file_exists", path=path))
         self.overlay_directory = None
         from .overlay import enabled, prepare, ffmpeg_options
         if overlay_path is None and enabled(overlay):
@@ -48,7 +49,7 @@ class Encoder:
 
     def write(self, frame):
         if self.process.poll() is not None:
-            raise RuntimeError("Кодировщик завершился до записи первого кадра.")
+            raise RuntimeError(tr("error.encoder_exited"))
         self.process.stdin.write(frame)
 
     def abort(self):
@@ -72,7 +73,7 @@ class Encoder:
             log.debug("Encoder exit: code=%s timed_out=%s",code,self.timed_out)
             if code or self.timed_out:
                 log.error("Encoder finalization failed")
-                raise RuntimeError(diagnostic or "Кодировщик не завершил запись вовремя.")
+                raise RuntimeError(diagnostic or tr("error.encoder_timeout"))
         finally:
             watchdog.cancel()
             if self.process.poll() is None:

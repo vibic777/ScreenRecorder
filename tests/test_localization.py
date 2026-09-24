@@ -10,6 +10,10 @@ from screenrec.ui.main_window import MainWindow
 from screenrec.version import __version__
 
 
+def re_cyrillic(text):
+    return any("Ѐ" <= char <= "ӿ" for char in text)
+
+
 class LocalizationStartupTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -79,6 +83,58 @@ class LocalizationStartupTests(unittest.TestCase):
         self.assertEqual(english.tr("menu.settings"), "Settings")
         self.assertEqual(english.tr("menu.help"), "Help")
         self.assertEqual(english.tr("menu.language"), "Language")
+
+    def test_locales_have_same_keys_and_real_line_breaks(self):
+        english = Translator("en")._messages
+        russian = Translator("ru")._messages
+        self.assertEqual(set(english), set(russian))
+        for messages in (english, russian):
+            for key, text in messages.items():
+                self.assertTrue(text.strip(), key)
+                self.assertNotIn("\\n", text, key)
+
+    def test_every_literal_key_in_code_exists(self):
+        import re
+        from pathlib import Path
+        root = Path(__file__).resolve().parents[1] / "src" / "screenrec"
+        messages = Translator("en")._messages
+        pattern = re.compile(r"""\b(?:t|tr)\(\s*["']([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+)["']""")
+        missing = {(path.name, key) for path in root.rglob("*.py")
+                   for key in pattern.findall(path.read_text(encoding="utf-8")) if key not in messages}
+        self.assertEqual(missing, set())
+
+    def test_backend_messages_have_no_hardcoded_russian(self):
+        import ast
+        from pathlib import Path
+        root = Path(__file__).resolve().parents[1] / "src" / "screenrec"
+        found = []
+        for folder in ("recorder", "config", "logger"):
+            for path in (root / folder).rglob("*.py"):
+                for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+                    if isinstance(node, ast.Call) and getattr(node.func, "id", "").endswith(("Error", "Exception")):
+                        for arg in node.args:
+                            if isinstance(arg, ast.Constant) and isinstance(arg.value, str) and re_cyrillic(arg.value):
+                                found.append(f"{path.name}:{node.lineno}")
+        self.assertEqual(found, [])
+
+    def test_process_language_translates_backend_messages(self):
+        from screenrec.localization import set_language, tr, LANGUAGE_ENV
+        previous = os.environ.get(LANGUAGE_ENV)
+        self.addCleanup(set_language, previous or "en")
+        set_language("ru")
+        self.assertEqual(os.environ[LANGUAGE_ENV], "ru")
+        self.assertEqual(tr("error.window_closed"), Translator("ru").tr("error.window_closed"))
+        set_language("en")
+        self.assertEqual(tr("settings.audio_mode.system"), "System audio")
+
+    def test_filename_format_labels_follow_language(self):
+        from screenrec.ui.filename_dialog import FilenameDialog
+        for language, label in (("en", "Year-month-day (2026-09-13)"), ("ru", "Год-месяц-день (2026-09-13)")):
+            settings = Settings()
+            settings.language = language
+            dialog = FilenameDialog(settings)
+            self.addCleanup(dialog.close)
+            self.assertEqual(dialog.date_format.itemText(dialog.date_format.findData("ymd")), label)
 
     def test_translation_falls_back_for_unknown_language_and_key(self):
         translator = Translator("de")

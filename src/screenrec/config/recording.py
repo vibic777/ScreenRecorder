@@ -1,6 +1,9 @@
+from screenrec.localization import tr
+
 FORMATS = {"mp4": "MP4 (H.264)", "mkv": "MKV (H.264)", "webm": "WebM (VP9)"}
-QUALITIES = {"high": "Высокое", "balanced": "Сбалансированное", "compact": "Компактный файл"}
-AUDIO_MODES = {"none": "Без звука", "microphone": "Микрофон", "system": "Системный звук", "both": "Микрофон + системный звук"}
+# Display labels live in the locales: settings.quality.<key>, settings.audio_mode.<key>.
+QUALITIES = ("high", "balanced", "compact")
+AUDIO_MODES = ("none", "microphone", "system", "both")
 CRF = {"mp4": {"high": 18, "balanced": 23, "compact": 30},
        "mkv": {"high": 18, "balanced": 23, "compact": 30},
        "webm": {"high": 24, "balanced": 32, "compact": 40}}
@@ -8,7 +11,7 @@ CRF = {"mp4": {"high": 18, "balanced": 23, "compact": 30},
 
 def video_options(file_format, quality, fps):
     if file_format not in FORMATS or quality not in QUALITIES:
-        raise ValueError("Неизвестный формат или качество записи")
+        raise ValueError(tr("error.recording_options"))
     if file_format == "webm":
         codec = ["-c:v", "libvpx-vp9", "-deadline", "realtime", "-cpu-used", "6", "-b:v", "0"]
     else:

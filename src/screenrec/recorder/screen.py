@@ -1,3 +1,4 @@
+from screenrec.localization import tr
 import os
 import platform
 
@@ -9,9 +10,9 @@ log = get_logger(__name__)
 def check_platform():
     system = platform.system()
     if system not in ("Windows", "Linux"):
-        raise RuntimeError("Первый этап поддерживает Windows и Linux (X11).")
+        raise RuntimeError(tr("error.screen_platform"))
     if system == "Linux" and (os.environ.get("XDG_SESSION_TYPE") == "wayland" or os.environ.get("WAYLAND_DISPLAY")):
-        raise RuntimeError("Захват Wayland пока не реализован. Войдите в сеанс X11 для записи экрана.")
+        raise RuntimeError(tr("error.wayland"))
 
 
 def monitors():
