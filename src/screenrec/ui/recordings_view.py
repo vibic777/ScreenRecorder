@@ -1,8 +1,10 @@
 """Local recordings catalogue and Qt Multimedia playback."""
+import subprocess
+import threading
 from datetime import datetime
 from pathlib import Path
 from screenrec.qt.QtCore import Qt,QUrl,QRectF,QObject,Signal
-from screenrec.qt.QtGui import QShortcut,QKeySequence,QDesktopServices,QPainter,QColor
+from screenrec.qt.QtGui import QShortcut,QKeySequence,QDesktopServices,QPainter,QColor,QImage
 from screenrec.qt.QtMultimedia import QMediaPlayer,QAudioOutput,QMediaMetaData
 from screenrec.qt.QtMultimediaWidgets import QVideoWidget
 from screenrec.qt import BACKEND
@@ -18,19 +20,35 @@ def clock_text(milliseconds):
     seconds=max(0,int(milliseconds)//1000)
     return f"{seconds//3600:02}:{seconds//60%60:02}:{seconds%60:02}"
 
-class FrameRelay(QObject):
-    """Convert Qt5 probe frames on the emitting thread, deliver images on the GUI thread.
+def grab_frame(path,position_ms=0,timeout=10):
+    """Decode one frame with FFmpeg; returns a QImage or None."""
+    from imageio_ffmpeg import get_ffmpeg_exe
+    command=[get_ffmpeg_exe(),"-hide_banner","-loglevel","error"]
+    if position_ms>0:
+        command+=["-ss",f"{position_ms/1000:.3f}"]
+    command+=["-i",str(path),"-frames:v","1","-f","image2pipe","-vcodec","png","-"]
+    try:
+        result=subprocess.run(command,capture_output=True,timeout=timeout,
+            creationflags=getattr(subprocess,"CREATE_NO_WINDOW",0))
+    except (OSError,subprocess.TimeoutExpired):
+        log.exception("FFmpeg frame grab failed: %s",path)
+        return None
+    image=QImage()
+    if result.returncode!=0 or not image.loadFromData(result.stdout,"PNG"):
+        log.warning("FFmpeg frame grab returned no image: file=%s code=%s",path,result.returncode)
+        return None
+    return image
 
-    WMF emits QVideoProbe frames from its streaming thread; pausing the player
-    or touching widgets there can deadlock playback on Windows 8.1.
+class FrameGrabber(QObject):
+    """Qt5 first-frame source that never touches the WMF pipeline.
+
+    QVideoProbe plus play/pause priming deadlocks Qt5 WMF playback on
+    Windows 8.1, so the legacy build decodes the preview frame with FFmpeg
+    on a worker thread and delivers it to the GUI thread via a queued signal.
     """
-    image_ready=Signal(object)
-    def convert(self,frame):
-        if not frame.isValid():
-            return
-        image=frame.image()
-        if image is not None and not image.isNull():
-            self.image_ready.emit(image.copy())
+    image_ready=Signal(object,object)
+    def request(self,path):
+        threading.Thread(target=lambda:self.image_ready.emit(path,grab_frame(path)),daemon=True).start()
 
 class PausedFrame(QWidget):
     def __init__(self,owner):
@@ -188,22 +206,12 @@ class RecordingsView(QWidget):
         self.player.positionChanged.connect(self.position_changed)
         (self.player.playbackStateChanged if hasattr(self.player, "playbackStateChanged") else self.player.stateChanged).connect(self.state_changed)
         self.player.metaDataChanged.connect(self.metadata_changed)
-        if hasattr(self.video, "videoSink"):
-            self.video.videoSink().videoFrameChanged.connect(self.frame_changed)
-            self.video_probe = None
+        self.legacy = not hasattr(self.video, "videoSink")
+        if self.legacy:
+            self.frame_grabber = FrameGrabber(self)
+            self.frame_grabber.image_ready.connect(self.grabbed_frame)
         else:
-            self.video_probe = None
-            try:
-                from screenrec.qt.QtMultimedia import QVideoProbe
-                self.video_probe = QVideoProbe(self)
-                self.frame_relay = FrameRelay(self)
-                self.frame_relay.image_ready.connect(self.image_ready)
-                self.video_probe.videoFrameProbed.connect(self.frame_relay.convert, Qt.ConnectionType.DirectConnection)
-                if not self.video_probe.setSource(self.player):
-                    log.warning("Qt5 video probe could not attach to player")
-                    self.video_probe = None
-            except (ImportError, AttributeError, RuntimeError):
-                log.exception("Qt5 video probe initialization failed")
+            self.video.videoSink().videoFrameChanged.connect(self.frame_changed)
         self.timeline.sliderReleased.connect(lambda:self.player.setPosition(self.timeline.value()))
         self.timeline.sliderMoved.connect(lambda p:self.time.setText(clock_text(p)+" / "+clock_text(self.player.duration())))
         self.play.clicked.connect(self.toggle_play)
@@ -284,19 +292,34 @@ class RecordingsView(QWidget):
         if item:
             self.load(Path(item.data(0,Qt.ItemDataRole.UserRole)))
     def load(self,path):
+        path=path.resolve()
+        if self.legacy and path==self.loaded_path:
+            # A second setMedia on the same file while WMF is still opening it wedges the session.
+            log.debug("Player source already loaded, skipping: %s",path)
+            self.current=path
+            self.delete.setEnabled(not self.recording)
+            return
         self.priming=False
         self.wanted_play=False
         self.player.stop()
-        self.current=path.resolve()
+        self.current=path
         self.frame_image=None
         self.first_image=None
         self.paused_frame.update()
         self.info.setText(self.current.name)
         self.delete.setEnabled(not self.recording)
-        self.priming=not self.recording
-        self._set_muted(True)
+        if self.legacy:
+            self.frame_grabber.request(self.current)
+        else:
+            self.priming=not self.recording
+            self._set_muted(True)
         self._set_source(QUrl.fromLocalFile(str(self.current)))
         log.debug("Player source loaded: %s",self.current)
+    def grabbed_frame(self,path,image):
+        if path!=self.current or image is None:
+            return
+        log.debug("Preview frame ready: %s %sx%s",path,image.width(),image.height())
+        self.image_ready(image)
     def media_status(self,status):
         media_status = getattr(QMediaPlayer, "MediaStatus", QMediaPlayer)
         loaded = getattr(media_status, "LoadedMedia", None)
@@ -306,6 +329,7 @@ class RecordingsView(QWidget):
         if status==loaded:
             self.metadata_changed()
             if self.priming or self.wanted_play:
+                log.debug("Player play: priming=%s wanted=%s",self.priming,self.wanted_play)
                 self.player.play()
         elif status==invalid:
             self.media_error()
@@ -372,7 +396,11 @@ class RecordingsView(QWidget):
             self.time.setText(clock_text(value)+" / "+clock_text(self.player.duration()))
     def state_changed(self,state):
         playing = getattr(getattr(QMediaPlayer, "PlaybackState", QMediaPlayer), "PlayingState")
-        self.screen.setCurrentIndex(0 if state==playing else 1)
+        log.debug("Player state: %s",state)
+        # Qt5 QVideoWidget keeps the last frame on pause; without a probe there is no frame to paint instead.
+        paused = getattr(getattr(QMediaPlayer, "PlaybackState", QMediaPlayer), "PausedState")
+        video = state==playing or (self.legacy and state==paused)
+        self.screen.setCurrentIndex(0 if video else 1)
         self.paused_frame.update()
         icon=QStyle.StandardPixmap.SP_MediaPause if state==playing else QStyle.StandardPixmap.SP_MediaPlay
         self.play.setIcon(self.style().standardIcon(icon))
@@ -395,6 +423,7 @@ class RecordingsView(QWidget):
     def media_error(self,*_):
         self.priming=False
         self.wanted_play=False
+        self.loaded_path=None
         self.info.setText(self.t("player.playback_error") + " "+self.player.errorString())
         status = self.player.mediaStatus()
         error = self.player.error()
@@ -414,6 +443,10 @@ class RecordingsView(QWidget):
             dialog.hide()
             dialog.deleteLater()
     def snapshot(self):
+        if self.legacy and self.current and self.player.position()>0:
+            image=grab_frame(self.current,self.player.position())
+            if image is not None:
+                self.frame_image=image
         if self.frame_image is None or self.frame_image.isNull():
             self.info.setText(self.t("player.no_frame"))
             return
