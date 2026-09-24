@@ -1,3 +1,3 @@
 """Application version shown in the UI and bundled executable."""
 
-__version__ = "0.9.3"
+__version__ = "0.9.4"

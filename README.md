@@ -27,7 +27,7 @@ ScreenRec records locally and does not upload recordings, logs, tab contents, ov
 
 ## Release status
 
-Version 0.9.3 provides separate Modern (Windows 10/11) and Legacy (Windows 8/8.1) executables. Verify downloaded release assets against the attached SHA-256 checksums.
+Version 0.9.4 provides separate Modern (Windows 10/11) and Legacy (Windows 8/8.1) executables. Verify downloaded release assets against the attached SHA-256 checksums.
 
 User-verified: Modern on Windows 10/11; Legacy on Windows 8.1.
 
