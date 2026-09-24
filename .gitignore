@@ -54,3 +54,16 @@ Thumbs.db
 .idea/
 .vscode/
 .cursor/
+.vs/
+.claude/
+.pytest_cache/
+out/
+private/
+
+# Build artifacts (release binaries are published as GitHub release assets)
+*.exe
+*.dll
+*.pyd
+*.spec.bak
+*.zip
+*.7z
