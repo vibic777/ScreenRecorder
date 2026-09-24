@@ -1,7 +1,7 @@
 """Local recordings catalogue and Qt Multimedia playback."""
 from datetime import datetime
 from pathlib import Path
-from screenrec.qt.QtCore import Qt,QUrl,QRectF
+from screenrec.qt.QtCore import Qt,QUrl,QRectF,QObject,Signal
 from screenrec.qt.QtGui import QShortcut,QKeySequence,QDesktopServices,QPainter,QColor
 from screenrec.qt.QtMultimedia import QMediaPlayer,QAudioOutput,QMediaMetaData
 from screenrec.qt.QtMultimediaWidgets import QVideoWidget
@@ -17,6 +17,20 @@ log=get_logger(__name__)
 def clock_text(milliseconds):
     seconds=max(0,int(milliseconds)//1000)
     return f"{seconds//3600:02}:{seconds//60%60:02}:{seconds%60:02}"
+
+class FrameRelay(QObject):
+    """Convert Qt5 probe frames on the emitting thread, deliver images on the GUI thread.
+
+    WMF emits QVideoProbe frames from its streaming thread; pausing the player
+    or touching widgets there can deadlock playback on Windows 8.1.
+    """
+    image_ready=Signal(object)
+    def convert(self,frame):
+        if not frame.isValid():
+            return
+        image=frame.image()
+        if image is not None and not image.isNull():
+            self.image_ready.emit(image.copy())
 
 class PausedFrame(QWidget):
     def __init__(self,owner):
@@ -54,6 +68,7 @@ class RecordingsView(QWidget):
         self.directory=Path(directory)
         self.translator=Translator(language)
         self.current=None
+        self.loaded_path=None
         self.fullscreen=None
         self.recording=False
         self.priming=False
@@ -161,12 +176,11 @@ class RecordingsView(QWidget):
         self.splitter.addWidget(self.pane)
         self.splitter.setSizes([350,500])
         self.player=QMediaPlayer(self)
-        self.audio=QAudioOutput(self) if BACKEND == "PySide6" else QAudioOutput()
-        self.audio.setVolume(.7)
-        if BACKEND == "PySide6":
+        # Qt5 QAudioOutput is a raw PCM device, not a player sink: Qt5 volume lives on QMediaPlayer.
+        self.audio=QAudioOutput(self) if BACKEND == "PySide6" else None
+        if self.audio is not None:
             self.player.setAudioOutput(self.audio)
-        else:
-            self.player.setAudioOutput(self.audio) if hasattr(self.player, "setAudioOutput") else None
+        self._set_volume(self.volume.value())
         self.player.setVideoOutput(self.video)
         self.player.mediaStatusChanged.connect(self.media_status)
         (self.player.errorOccurred if hasattr(self.player, "errorOccurred") else self.player.error).connect(self.media_error)
@@ -182,7 +196,9 @@ class RecordingsView(QWidget):
             try:
                 from screenrec.qt.QtMultimedia import QVideoProbe
                 self.video_probe = QVideoProbe(self)
-                self.video_probe.videoFrameProbed.connect(self.frame_changed)
+                self.frame_relay = FrameRelay(self)
+                self.frame_relay.image_ready.connect(self.image_ready)
+                self.video_probe.videoFrameProbed.connect(self.frame_relay.convert, Qt.ConnectionType.DirectConnection)
                 if not self.video_probe.setSource(self.player):
                     log.warning("Qt5 video probe could not attach to player")
                     self.video_probe = None
@@ -196,7 +212,7 @@ class RecordingsView(QWidget):
         self.next.clicked.connect(lambda:self.adjacent(1))
         back.clicked.connect(lambda:self.seek(-10000))
         forward.clicked.connect(lambda:self.seek(10000))
-        self.volume.valueChanged.connect(lambda value:self.audio.setVolume(value/100))
+        self.volume.valueChanged.connect(self._set_volume)
         self.mute.toggled.connect(self.set_muted)
         self.speed.currentIndexChanged.connect(lambda _:self.player.setPlaybackRate(self.speed.currentData()))
         expand.toggled.connect(self.library.setHidden)
@@ -301,6 +317,8 @@ class RecordingsView(QWidget):
         image = frame.toImage() if hasattr(frame, "toImage") else frame.image()
         if image is None or image.isNull():
             return
+        self.image_ready(image)
+    def image_ready(self,image):
         self.frame_image=image
         if self.first_image is None:
             self.first_image=self.frame_image
@@ -452,7 +470,8 @@ class RecordingsView(QWidget):
             self.stop_playback()
         self.setEnabled(not busy)
         self.delete.setEnabled(bool(self.current) and not busy)
-        if previous and not busy and self.current and self.isVisible():
+        # recording_saved has usually loaded the new file already; a second setMedia races WMF.
+        if previous and not busy and self.current and self.isVisible() and self.loaded_path!=self.current:
             self.load(self.current)
     def activate(self):
         self.refresh()
@@ -464,11 +483,18 @@ class RecordingsView(QWidget):
         self._set_source(QUrl())
 
     def _set_source(self, url):
+        self.loaded_path = Path(url.toLocalFile()).resolve() if not url.isEmpty() else None
         if hasattr(self.player, "setSource"):
             self.player.setSource(url)
         else:
             from screenrec.qt.QtMultimedia import QMediaContent
             self.player.setMedia(QMediaContent(url))
+
+    def _set_volume(self, value):
+        if self.audio is not None:
+            self.audio.setVolume(value/100)
+        else:
+            self.player.setVolume(value)
 
     def _set_muted(self, value):
         if hasattr(self.audio, "setMuted"):
