@@ -1,0 +1,77 @@
+{
+  "extensionName": {
+    "message": "ScreenRec — запись вкладки"
+  },
+  "extensionDescription": {
+    "message": "Локальная передача выбранной вкладки в ScreenRec. Без облака."
+  },
+  "captureDenied": {
+    "message": "Браузер отказал в захвате вкладки"
+  },
+  "stalePairing": {
+    "message": "Код устарел или приложение недоступно"
+  },
+  "invalidPairing": {
+    "message": "Неверный код подключения"
+  },
+  "tabAlreadyRecording": {
+    "message": "Уже записывается вкладка. Сначала остановите её."
+  },
+  "uploadBehind": {
+    "message": "Передача видео не успевает за записью. Уменьшите качество."
+  },
+  "tabDefault": {
+    "message": "Вкладка"
+  },
+  "bridgeError": {
+    "message": "Ошибка связи со ScreenRec: "
+  },
+  "encoderError": {
+    "message": "Ошибка браузерного кодировщика"
+  },
+  "startTabSession": {
+    "message": "Начните новый сеанс вкладки в ScreenRec"
+  },
+  "alreadyRecording": {
+    "message": "Уже идёт запись"
+  },
+  "webmUnsupported": {
+    "message": "Браузер не поддерживает запись WebM"
+  },
+  "bridgeJustification": {
+    "message": "Передача выбранной вкладки в локальное приложение ScreenRec"
+  },
+  "popupStart": {
+    "message": "Подключить и записывать эту вкладку"
+  },
+  "popupTitle": {
+    "message": "Записать эту вкладку"
+  },
+  "popupConnecting": {
+    "message": "Подключение…"
+  },
+  "popupNoActive": {
+    "message": "Нет активной записи"
+  },
+  "popupCode": {
+    "message": "Код подключения"
+  },
+  "popupStopping": {
+    "message": "Завершение записи…"
+  },
+  "popupConnectError": {
+    "message": "Не удалось подключиться"
+  },
+  "popupPlaceholder": {
+    "message": "порт:код"
+  },
+  "popupHint": {
+    "message": "В ScreenRec выберите «Вкладка браузера», нажмите «Начать запись» и скопируйте код подключения."
+  },
+  "popupStarted": {
+    "message": "Запись началась. Можно переключаться на другие вкладки."
+  },
+  "popupStop": {
+    "message": "Остановить запись вкладки"
+  }
+}

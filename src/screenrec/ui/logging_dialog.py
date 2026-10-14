@@ -1,0 +1,91 @@
+from dataclasses import replace
+from pathlib import Path
+from screenrec.qt.QtCore import QUrl
+from screenrec.qt.QtGui import QDesktopServices
+from screenrec.qt.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QCheckBox,QLineEdit,QPushButton,
+    QLabel,QDialogButtonBox,QFileDialog,QMessageBox)
+from screenrec.logger.logger import LEVELS,get_default_log_path
+from screenrec.localization import Translator
+
+class LoggingDialog(QDialog):
+    def __init__(self,settings,parent=None):
+        super().__init__(parent)
+        self.settings=settings
+        self.translator=Translator(settings.language)
+        self.setWindowTitle(self.t("logging.title"))
+        self.setMinimumWidth(680)
+        layout=QVBoxLayout(self)
+        self.enabled=QCheckBox(self.t("logging.enable"))
+        self.enabled.setChecked(settings.logging_enabled)
+        layout.addWidget(self.enabled)
+        layout.addWidget(QLabel(self.t("logging.file")))
+        row=QHBoxLayout()
+        self.path=QLineEdit(settings.log_path or str(get_default_log_path()))
+        browse=QPushButton(self.t("logging.choose"))
+        row.addWidget(self.path,1)
+        row.addWidget(browse)
+        layout.addLayout(row)
+        row=QHBoxLayout()
+        default=QPushButton(self.t("logging.default"))
+        open_file=QPushButton(self.t("logging.open_file"))
+        open_dir=QPushButton(self.t("logging.open_folder"))
+        row.addWidget(default)
+        row.addWidget(open_file)
+        row.addWidget(open_dir)
+        layout.addLayout(row)
+        layout.addWidget(QLabel(self.t("logging.levels")))
+        row=QHBoxLayout()
+        self.levels={}
+        for name in LEVELS:
+            box=QCheckBox("FATAL ERROR" if name=="FATAL" else name)
+            box.setChecked(name in settings.log_levels)
+            row.addWidget(box)
+            self.levels[name]=box
+        layout.addLayout(row)
+        bulk_row=QHBoxLayout()
+        select_all=QPushButton(self.t("logging.select_all"))
+        clear_all=QPushButton(self.t("logging.clear_all"))
+        bulk_row.addWidget(select_all)
+        bulk_row.addWidget(clear_all)
+        bulk_row.addStretch()
+        layout.addLayout(bulk_row)
+        select_all.clicked.connect(lambda: self.set_all_levels(True))
+        clear_all.clicked.connect(lambda: self.set_all_levels(False))
+        note=QLabel(self.t("logging.note").replace("/n", "\n").replace("\\n", "\n"))
+        note.setWordWrap(True)
+        layout.addWidget(note)
+        buttons=QDialogButtonBox(QDialogButtonBox.StandardButton.Save|QDialogButtonBox.StandardButton.Cancel)
+        buttons.button(QDialogButtonBox.StandardButton.Save).setText(self.t("common.save"))
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText(self.t("common.cancel"))
+        layout.addWidget(buttons)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        browse.clicked.connect(self.browse)
+        default.clicked.connect(lambda:self.path.setText(str(get_default_log_path())))
+        open_file.clicked.connect(lambda:self.open(False))
+        open_dir.clicked.connect(lambda:self.open(True))
+    def t(self,key):
+        return self.translator.tr(key)
+
+    def set_all_levels(self, checked):
+        for box in self.levels.values():
+            box.setChecked(checked)
+
+    def browse(self):
+        path,_=QFileDialog.getSaveFileName(self,self.t("logging.file_title"),self.path.text(),self.t("logging.file_filter"))
+        if path:
+            self.path.setText(path)
+    def open(self,directory):
+        path=Path(self.path.text().strip() or get_default_log_path())
+        if directory:
+            path=path.parent
+        if not path.exists():
+            QMessageBox.information(self,self.t("logging.title"),self.t("logging.missing"))
+            return
+        if not QDesktopServices.openUrl(QUrl.fromLocalFile(str(path.resolve()))):
+            QMessageBox.warning(self,self.t("logging.title"),self.t("logging.open_error"))
+    def result_settings(self):
+        path=self.path.text().strip()
+        return replace(self.settings,logging_enabled=self.enabled.isChecked(),
+                       log_path="" if not path or path==str(get_default_log_path()) else path,
+                       log_levels=[key for key,box in self.levels.items() if box.isChecked()])

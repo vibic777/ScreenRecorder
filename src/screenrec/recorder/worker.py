@@ -1,0 +1,167 @@
+from screenrec.localization import tr
+import threading
+import time
+import os
+import shutil
+from pathlib import Path
+from screenrec.config.filenames import reserve
+
+from screenrec.qt.QtCore import QThread, Signal
+
+from .encoder import Encoder
+from .screen import ScreenSource
+from .audio import AudioSession
+from .muxer import mux_audio
+from screenrec.config.settings import Settings
+from screenrec.logger.logger import get_logger
+log = get_logger(__name__)
+
+
+class RecordingWorker(QThread):
+    recording_started = Signal(str)
+    recording_saved = Signal(str)
+    failed = Signal(str)
+    warning = Signal(str)
+    finalizing = Signal()
+
+    def __init__(self, monitor, directory, fps, parent=None, settings=None, overlay_path=None):
+        super().__init__(parent)
+        self.monitor = monitor
+        self.directory = Path(directory)
+        self.fps = fps
+        self.stop_event = threading.Event()
+        self.encoder = None
+        self.settings = settings or Settings(fps=fps)
+        self.overlay_path = overlay_path
+
+    def stop(self):
+        self.stop_event.set()
+
+    def run(self):
+        log.info("Capture worker starting: source=%s format=%s fps=%s audio=%s",self.monitor.get("kind","monitor"),self.settings.file_format,self.fps,self.settings.audio_mode)
+        path = None
+        reservation = None
+        error = None
+        audio_error = None
+        frames = 0
+        audio = None
+        parts = None
+        parts_created = False
+        tracks = []
+        try:
+            self.directory.mkdir(parents=True, exist_ok=True)
+            path, reservation = reserve(self.directory, self.settings)
+            video = path
+            if self.settings.audio_mode != "none":
+                parts = self.directory / f".{path.stem}.parts"
+                parts.mkdir()
+                parts_created = True
+                video = parts / f"video.{self.settings.file_format}"
+                audio = AudioSession(self.settings, parts)
+                audio.prepare()
+            if self.monitor.get('kind') == 'window':
+                from .window import source as window_source
+                capture_source = window_source(self.monitor)
+            else:
+                capture_source = ScreenSource(self.monitor)
+            log.debug("Capture worker: entering screen source")
+            with capture_source as source:
+                log.debug("Capture worker: source entered size=%sx%s", getattr(source, "width", None), getattr(source, "height", None))
+                frame = source.grab()
+                log.debug("First source frame received: type=%s bytes=%s", type(frame).__name__, getattr(frame, "nbytes", len(frame) if frame is not None else 0))
+                self.encoder = Encoder(video, getattr(source, "width", self.monitor["width"]), getattr(source, "height", self.monitor["height"]), self.fps,
+                                       self.settings.file_format, self.settings.quality,
+                                       overlay=self.settings.overlay if self.settings.overlay_enabled else None,
+                                       overlay_path=self.overlay_path)
+                start = time.monotonic()
+                if audio:
+                    audio.start(start)
+                self.encoder.write(frame)
+                frames = 1
+                self.recording_started.emit(str(path))
+                while not self.stop_event.is_set():
+                    if audio:
+                        audio.check()
+                    if self.stop_event.wait(max(0, start + frames / self.fps - time.monotonic())):
+                        break
+                    frame = source.grab()
+                    # Duplicate the last captured frame when capture is late, preserving duration.
+                    target = max(frames + 1, int((time.monotonic() - start) * self.fps) + 1)
+                    # Cap catch-up work to one second. A long capture stall
+                    # should not produce an unbounded burst or delay stop.
+                    target = min(target, frames + self.fps)
+                    while frames < target and not self.stop_event.is_set():
+                        self.encoder.write(frame)
+                        frames += 1
+                        if frames % (self.fps * 5) == 0:
+                            log.trace("Capture progress: frames=%s",frames)
+        except Exception as exc:
+            log.exception("Capture worker failed")
+            error = str(exc)
+        finally:
+            self.stop_event.set()
+            self.finalizing.emit()
+            if audio:
+                try:
+                    tracks = audio.finish(check=audio.origin is not None)
+                except Exception as exc:
+                    audio_error = str(exc)
+            if self.encoder:
+                try:
+                    self.encoder.finish()
+                except Exception as exc:
+                    error = f"{error}\n{exc}" if error else str(exc)
+                self.encoder = None
+        if audio_error and (not frames or not video or not video.exists()):
+            error = f"{error}\n{audio_error}" if error else audio_error
+        if not error and audio_error and audio and frames and video and video.exists():
+            # Audio is optional to recoverability: publish the finalized video
+            # and leave the WAV/parts folder available for manual recovery.
+            try:
+                shutil.move(str(video), str(path))
+                self.recording_saved.emit(str(path))
+                self.warning.emit(f"{audio_error}\n{tr('error.audio_video_saved', path=path)}\n{tr('error.parts_saved', path=parts)}")
+            except OSError as exc:
+                error = f"{audio_error}\n{exc}"
+        if not error and not audio_error and audio and frames:
+            try:
+                mux_audio(video, tracks, path, self.settings, frames / self.fps)
+            except Exception as exc:
+                error = str(exc)
+            else:
+                try:
+                    for file in [video, *(track[0] for track in tracks)]:
+                        file.unlink()
+                    parts.rmdir()
+                except OSError:
+                    log.exception("Recording saved, but temporary parts could not be removed: %s", parts)
+        # A failed start (for example, a window closed while audio was being
+        # prepared) must not strand empty WAV files and a hidden parts folder.
+        if error and not frames and parts_created and parts.exists():
+            try:
+                for item in parts.iterdir():
+                    if item.is_file():
+                        item.unlink()
+                parts.rmdir()
+                log.debug("Incomplete temporary recording parts removed")
+            except OSError:
+                log.exception("Could not remove incomplete temporary parts: %s", parts)
+        log.debug("Capture worker finished: frames=%s failed=%s",frames,bool(error))
+        if self.overlay_path:
+            try:
+                os.unlink(self.overlay_path)
+                log.debug("Prepared overlay removed: %s", self.overlay_path)
+            except OSError:
+                log.exception("Failed to remove prepared overlay: %s", self.overlay_path)
+        if reservation:
+            try:
+                reservation.rmdir()
+            except OSError:
+                pass
+        if error:
+            suffix = "\n" + tr("error.file_incomplete", path=path) if path and path.exists() else ""
+            if parts and parts.exists():
+                suffix += "\n" + tr("error.parts_saved", path=parts)
+            self.failed.emit(error + suffix)
+        elif frames and not (audio_error and audio and path.exists()):
+            self.recording_saved.emit(str(path))

@@ -1,0 +1,94 @@
+import json
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+
+from platformdirs import user_config_path, user_videos_path
+from .recording import FORMATS, QUALITIES, AUDIO_MODES
+from .templates import default_template
+from screenrec.logger.logger import get_logger
+log = get_logger(__name__)
+
+
+@dataclass
+class Settings:
+    output_dir: str = str(user_videos_path() / "ScreenRec")
+    fps: int = 30
+    close_to_tray: bool = False
+    allow_multiple_instances: bool = False
+    notifications: bool = True
+    file_format: str = "mp4"
+    quality: str = "balanced"
+    audio_mode: str = "none"
+    microphone_id: str = ""
+    system_device_id: str = ""
+    audio_bitrate: int = 192
+    logging_enabled: bool = True
+    log_path: str = ""
+    log_levels: list = field(default_factory=lambda: ["TRACE","DEBUG","INFO","WARNING","ERROR","CRITICAL","FATAL"])
+    filename_prefix: str = "ScreenRec"
+    filename_date: bool = True
+    filename_time: bool = True
+    filename_uuid: bool = True
+    filename_date_format: str = "ymd"
+    filename_time_format: str = "24h"
+    overlay_enabled: bool = False
+    overlay_name: str = ""
+    overlay: dict = field(default_factory=default_template)
+    theme: str = "gray"
+    language: str = "en"
+    source_mode: str = "monitor"
+    region: dict = field(default_factory=dict)
+
+    @staticmethod
+    def path() -> Path:
+        return user_config_path("ScreenRec", appauthor=False) / "settings.json"
+
+    @classmethod
+    def load(cls):
+        try:
+            data = json.loads(cls.path().read_text(encoding="utf-8"))
+            return cls.from_data(data)
+        except (OSError, ValueError, AttributeError):
+            return cls()
+
+    @classmethod
+    def from_data(cls, data):
+        if not isinstance(data, dict):
+            return cls()
+        settings = cls()
+        for key, default in asdict(settings).items():
+            value = data.get(key, default)
+            if type(value) is type(default):
+                setattr(settings, key, value)
+        if settings.fps not in (15, 24, 30, 60):
+            settings.fps = 30
+        for key, choices, default in (("file_format", FORMATS, "mp4"),
+                                      ("quality", QUALITIES, "balanced"),
+                                      ("audio_mode", AUDIO_MODES, "none")):
+            if getattr(settings, key) not in choices:
+                setattr(settings, key, default)
+        if settings.language not in ("en", "ru"):
+            settings.language = "en"
+        if settings.theme not in ("green", "blue", "orange", "pink", "purple", "gray", "black"):
+            settings.theme = "gray"
+        if settings.source_mode not in ("monitor", "region", "window", "tab"):
+            settings.source_mode = "monitor"
+        if settings.audio_bitrate not in (96, 128, 192, 256, 320):
+            settings.audio_bitrate = 192
+        from screenrec.logger.logger import LEVELS
+        settings.log_levels = list(dict.fromkeys(item for item in settings.log_levels if isinstance(item,str) and item in LEVELS))
+        from .filenames import DATE_FORMATS, TIME_FORMATS, clean_prefix
+        settings.filename_prefix = clean_prefix(settings.filename_prefix)
+        if settings.filename_date_format not in DATE_FORMATS:
+            settings.filename_date_format = "ymd"
+        if settings.filename_time_format not in TIME_FORMATS:
+            settings.filename_time_format = "24h"
+        from .templates import validate
+        settings.overlay = validate(settings.overlay)
+        return settings
+
+    def save(self):
+        from .atomic import write_json
+        path = self.path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        write_json(path, asdict(self))

@@ -1,0 +1,574 @@
+import time
+import json
+from html import escape
+from dataclasses import replace
+from pathlib import Path
+
+from screenrec.qt.QtCore import QObject, QTimer, QUrl, Qt
+from screenrec.qt.QtGui import QActionGroup, QAction, QDesktopServices, QIcon
+from screenrec.qt.QtWidgets import QFileDialog, QMessageBox, QSystemTrayIcon, QDialog, QVBoxLayout, QTextBrowser, QDialogButtonBox
+
+from .config.settings import Settings
+from .config.profiles import save_profile, load_profile, load_default_profile
+from .localization import Translator, SUPPORTED_LANGUAGES, set_language as set_process_language
+from .recorder.screen import monitors
+from .recorder.worker import RecordingWorker
+from .ui.main_window import MainWindow
+from .ui.tray_menu import create_tray
+from .ui.settings_dialog import SettingsDialog
+from .config.recording import FORMATS
+from .config.commands import COMMANDS, commands_for
+from .ui.sources import SourceController
+from .ui.themes.theme_manager import THEMES, apply_theme
+from .logger.logger import get_logger, configure as configure_log, hub, shutdown as close_log
+from .version import __version__
+log = get_logger(__name__)
+
+
+class ScreenRecApp(SourceController, QObject):
+    def __init__(self, application, profile_path=None):
+        super().__init__(application)
+        self.application = application
+        self.settings = load_profile(profile_path) if profile_path else (load_default_profile() or Settings.load())
+        self.translator = Translator(self.settings.language)
+        set_process_language(self.settings.language)
+        log_warning = self.apply_logging()
+        log.info("Application started")
+        self.worker = None
+        self.exiting = False
+        self.started_at = None
+        self.stop_deadline = None
+        self.icon = QIcon(str(Path(__file__).parent / "assets/icons/icon_gray.svg"))
+        application.setWindowIcon(self.icon)
+        application.setQuitOnLastWindowClosed(False)
+        self.window = MainWindow(self.settings, self.icon)
+        self.window.setWindowTitle(f"{self.translator.tr('window.title')} v{__version__}")
+        self.start_action = QAction(self.translator.tr("action.start"), self)
+        self.stop_action = QAction(self.translator.tr("action.stop.full"), self)
+        self.stop_action.setEnabled(False)
+        self.show_action = QAction(self.translator.tr("window.show"), self)
+        self.exit_action = QAction(self.translator.tr("action.exit"), self)
+        self.start_action.setShortcut(COMMANDS["start_recording"].shortcut)
+        self.stop_action.setShortcut(COMMANDS["stop_recording"].shortcut)
+        self.show_action.setShortcut(COMMANDS["show_window"].shortcut)
+        self.exit_action.setShortcut(COMMANDS["exit"].shortcut)
+        self.start_action.triggered.connect(self.start_recording)
+        self.stop_action.triggered.connect(self.stop_recording)
+        self.show_action.triggered.connect(self.show_window)
+        self.exit_action.triggered.connect(lambda: self.request_exit())
+        menu = self.window.menuBar().addMenu(self.translator.tr("menu.file", fallback="File"))
+        menu.addAction(self.start_action)
+        menu.addAction(self.stop_action)
+        menu.addSeparator()
+        menu.addAction(self.exit_action)
+        settings_menu = self.window.menuBar().addMenu(self.translator.tr("menu.settings", fallback="Settings"))
+        help_menu = self.window.menuBar().addMenu(self.translator.tr("menu.help", fallback="Help"))
+        help_action = help_menu.addAction(self.translator.tr("help.about"))
+        help_action.triggered.connect(self.show_help)
+
+        profiles_menu = settings_menu.addMenu(self.translator.tr("profiles.menu"))
+        export_profile_action = profiles_menu.addAction(self.translator.tr("profiles.export"))
+        export_profile_action.triggered.connect(self.export_profile)
+        self.import_profile_action = profiles_menu.addAction(self.translator.tr("profiles.import"))
+        self.import_profile_action.triggered.connect(self.import_profile)
+
+        self.logging_action = settings_menu.addAction(self.translator.tr("settings.logging"))
+        self.logging_action.triggered.connect(self.configure_logging)
+        self.configure_action = settings_menu.addAction(self.translator.tr("settings.recording"))
+        self.configure_action.triggered.connect(self.configure_recording)
+        self.window.configure.clicked.connect(self.configure_recording)
+        self.filename_action = settings_menu.addAction(self.translator.tr("settings.filename"))
+        self.filename_action.triggered.connect(self.configure_filename)
+        self.window.filename_button.clicked.connect(self.configure_filename)
+        self.overlay_action = settings_menu.addAction(self.translator.tr("settings.overlay"))
+        self.overlay_action.triggered.connect(self.configure_overlay)
+        self.window.overlay_button.clicked.connect(self.configure_overlay)
+        self.window.overlay_enabled.toggled.connect(self.set_overlay_enabled)
+        notifications = self.notifications_action = settings_menu.addAction(self.translator.tr("settings.notifications"))
+        notifications.setCheckable(True)
+        notifications.setChecked(self.settings.notifications)
+        notifications.toggled.connect(self.set_notifications)
+        self.tray, self.tray_menu = create_tray(self.window, self.icon, self.start_action,
+                                               self.stop_action, self.show_action, self.exit_action)
+        self.language_menu = settings_menu.addMenu(self.translator.tr("menu.language", fallback="Language"))
+        self.language_group = QActionGroup(self)
+        self.language_group.setExclusive(True)
+        self.language_actions = {}
+        for key, label in SUPPORTED_LANGUAGES.items():
+            action = self.language_menu.addAction(self.translator.tr("language." + key))
+            action.setCheckable(True)
+            action.setData(key)
+            action.setChecked(key == self.settings.language)
+            self.language_group.addAction(action)
+            self.language_actions[key] = action
+        self.language_group.triggered.connect(self.set_language)
+        self.theme_menu = settings_menu.addMenu(self.translator.tr("settings.theme"))
+        self.theme_group = QActionGroup(self)
+        self.theme_group.setExclusive(True)
+        self.theme_actions = {}
+        for key, theme in THEMES.items():
+            action = self.theme_menu.addAction(QIcon(str(theme["window_icon_path"])), self.translator.tr(f"theme.{key}"))
+            action.setCheckable(True)
+            action.setData(key)
+            self.theme_group.addAction(action)
+            self.theme_actions[key] = action
+        self.theme_group.triggered.connect(lambda action: self.set_theme(action.data()))
+        self.set_theme(self.settings.theme, save=False)
+        self.tray.activated.connect(self.tray_activated)
+        if QSystemTrayIcon.isSystemTrayAvailable():
+            self.tray.show()
+        self.window.start.clicked.connect(self.start_recording)
+        self.window.stop.clicked.connect(self.stop_recording)
+        self.window.browse.clicked.connect(self.choose_folder)
+        self.window.open_folder.clicked.connect(self.open_folder)
+        self.window.refresh.clicked.connect(self.refresh_sources)
+        self.window.close_requested.connect(self.close_window)
+        self.window.close_to_tray.toggled.connect(self.set_close_to_tray)
+        self.window.fps.currentTextChanged.connect(self.set_fps)
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.tick)
+        self.timer.start(200)
+        application.aboutToQuit.connect(self.cleanup)
+        self.refresh_monitors()
+        self.update_summary()
+        self.initialize_sources()
+        if log_warning:
+            QTimer.singleShot(0, lambda: QMessageBox.warning(self.window,self.translator.tr("logging.title"),log_warning))
+
+    def show_help(self):
+        log.debug("Help requested; language=%s", self.settings.language)
+        shortcuts = "\n".join(f"{command.shortcut} — {self.translator.tr(command.label_key)}" for command in COMMANDS.values() if command.shortcut)
+        description = self.translator.tr("help.description").replace("/n", "\n").replace("\\n", "\n")
+        headings = ("RECORDING", "SOURCES", "AUDIO", "FORMATS", "OVERLAYS", "CATALOGUE", "TROUBLESHOOTING", "KEYBOARD SHORTCUTS", "HOW SETTINGS AFFECT THE RESULT", "ЗАПИСЬ", "ИСТОЧНИКИ", "ЗВУК", "ФОРМАТЫ", "НАЛОЖЕНИЯ", "КАТАЛОГ", "УСТРАНЕНИЕ ПРОБЛЕМ", "ГОРЯЧИЕ КЛАВИШИ", "КАК ПАРАМЕТРЫ ВЛИЯЮТ НА РЕЗУЛЬТАТ")
+        html = escape(description).replace("\n", "<br>")
+        for heading in headings:
+            html = html.replace(heading, f"<br><h3>{heading}</h3>")
+        html += "<br><h3>" + escape(self.translator.tr("help.shortcuts")) + "</h3>" + escape(shortcuts).replace("\n", "<br>")
+        dialog = QDialog(self.window)
+        dialog.setWindowTitle(f"{self.translator.tr('help.title')} v{__version__}")
+        dialog.resize(820, 620)
+        layout = QVBoxLayout(dialog)
+        browser = QTextBrowser(dialog)
+        browser.setOpenExternalLinks(False)
+        browser.setHtml(html)
+        layout.addWidget(browser)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close, parent=dialog)
+        buttons.rejected.connect(dialog.reject)
+        buttons.accepted.connect(dialog.accept)
+        layout.addWidget(buttons)
+        dialog.exec()
+    def set_language(self, action):
+        language = action.data()
+        log.info("Language change requested: %s", language)
+        if language == self.settings.language:
+            return
+        self.settings.language = language
+        self.settings.save()
+        QMessageBox.information(
+            self.window,
+            self.translator.tr("language.changed_title"),
+            self.translator.tr("language.restart_required"),
+        )
+    def apply_logging(self):
+        path, warning = configure_log(self.settings.logging_enabled,self.settings.log_path,self.settings.log_levels)
+        if self.settings.logging_enabled and path is None:
+            self.settings.logging_enabled = False
+        elif path is not None and warning:
+            self.settings.log_path = str(path)
+        return warning
+
+    def import_profile(self):
+        if self.worker:
+            return
+        path, _ = QFileDialog.getOpenFileName(
+            self.window, self.translator.tr("profiles.import_title"),
+            "", self.translator.tr("profiles.file_filter"),
+        )
+        if not path:
+            return
+        answer = QMessageBox.question(self.window, self.translator.tr("profiles.import_title"),
+                                      self.translator.tr("profiles.import_confirm", path=path),
+                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                      QMessageBox.StandardButton.No)
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        previous_language = self.settings.language
+        try:
+            loaded = load_profile(Path(path), fallback=False)
+        except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+            QMessageBox.warning(self.window, self.translator.tr("profiles.error_title"),
+                                self.translator.tr("profiles.import_error", error=exc))
+            return
+        self.settings = loaded
+        self.save_settings()
+        self.set_theme(self.settings.theme, save=False)
+        self.window.fps.blockSignals(True)
+        self.window.fps.setCurrentText(str(self.settings.fps))
+        self.window.fps.blockSignals(False)
+        self.window.close_to_tray.setChecked(self.settings.close_to_tray)
+        self.window.overlay_enabled.setChecked(self.settings.overlay_enabled)
+        self.notifications_action.blockSignals(True)
+        self.notifications_action.setChecked(self.settings.notifications)
+        self.notifications_action.blockSignals(False)
+        self.language_actions[self.settings.language].setChecked(True)
+        self.window.folder.setText(self.settings.output_dir)
+        self.window.recordings.set_directory(self.settings.output_dir)
+        self.window.source_mode.blockSignals(True)
+        self.window.source_mode.setCurrentIndex(self.window.source_mode.findData(self.settings.source_mode))
+        self.window.source_mode.blockSignals(False)
+        self.source_changed(save=False)
+        self.update_summary()
+        self.apply_logging()
+        if previous_language != self.settings.language:
+            QMessageBox.information(self.window, self.translator.tr("profiles.import_title"),
+                                    self.translator.tr("language.restart_required"))
+        else:
+            QMessageBox.information(self.window, self.translator.tr("profiles.import_title"),
+                                    self.translator.tr("profiles.imported", path=path))
+
+    def export_profile(self):
+        path, _ = QFileDialog.getSaveFileName(
+            self.window, self.translator.tr("profiles.export_title"),
+            "ScreenRec-profile.json", self.translator.tr("profiles.file_filter"),
+        )
+        if not path:
+            return
+        try:
+            save_profile(Path(path), self.settings)
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self.window, self.translator.tr("profiles.error_title"),
+                                self.translator.tr("profiles.export_error", error=exc))
+            return
+        QMessageBox.information(self.window, self.translator.tr("profiles.export_title"),
+                                self.translator.tr("profiles.exported", path=path))
+
+    def configure_logging(self):
+        from .ui.logging_dialog import LoggingDialog
+        dialog = LoggingDialog(self.settings,self.window)
+        if dialog.exec():
+            self.settings = dialog.result_settings()
+            warning = self.apply_logging()
+            self.save_settings()
+            log.info("Logging configuration applied")
+            if warning:
+                QMessageBox.warning(self.window,self.translator.tr("logging.title"),warning)
+
+    def configure_filename(self):
+        if self.worker:
+            return
+        from .ui.filename_dialog import FilenameDialog
+        dialog = FilenameDialog(self.settings, self.window)
+        if dialog.exec():
+            self.settings = dialog.result_settings()
+            self.save_settings()
+
+    def set_overlay_enabled(self, enabled):
+        log.info("Overlay master switch changed: %s", enabled)
+        self.settings.overlay_enabled = enabled
+        self.save_settings()
+
+    def configure_overlay(self):
+        if self.worker:
+            return
+        log.info("Opening overlay editor")
+        from .ui.overlay_editor import OverlayEditor
+        from .recorder.overlay import enabled
+        source = self.current_source() or {}
+        aspect = source.get("width", 16) / max(1, source.get("height", 9))
+        dialog = OverlayEditor(self.settings, self.window, aspect)
+        if dialog.exec():
+            self.settings.overlay = dialog.template
+            self.settings.overlay_name = dialog.names.currentText().strip()
+            self.settings.overlay_enabled = enabled(dialog.template)
+            log.info("Overlay editor accepted: switch=%s image=%s text=%s text_color=%s",
+                     self.settings.overlay_enabled,
+                     dialog.template["image"]["enabled"],
+                     dialog.template["text"]["enabled"],
+                     dialog.template["text"]["color"])
+            self.window.overlay_enabled.blockSignals(True)
+            self.window.overlay_enabled.setChecked(self.settings.overlay_enabled)
+            self.window.overlay_enabled.blockSignals(False)
+            self.save_settings()
+        else:
+            log.info("Overlay editor cancelled")
+
+    def set_theme(self, name, *, save=True):
+        log.info("Theme change requested: %s", name)
+        name = name if name in THEMES else "gray"
+        self.icon = apply_theme(self.application, self.window, self.tray, name)
+        self.settings.theme = name
+        self.theme_actions[name].setChecked(True)
+        if save:
+            self.save_settings()
+
+    def update_summary(self):
+        self.window.recording_summary.setText(f"{FORMATS[self.settings.file_format]} • "
+            f"{self.translator.tr('settings.quality.' + self.settings.quality)} • "
+            f"{self.translator.tr('settings.audio_mode.' + self.settings.audio_mode)}")
+
+    def configure_recording(self):
+        if self.worker:
+            return
+        dialog = SettingsDialog(self.settings, self.window)
+        if dialog.exec():
+            self.settings = dialog.result_settings()
+            self.window.fps.blockSignals(True)
+            self.window.fps.setCurrentText(str(self.settings.fps))
+            self.window.fps.blockSignals(False)
+            self.update_summary()
+            self.save_settings()
+
+    def save_settings(self):
+        try:
+            self.settings.save()
+            log.debug("Settings saved")
+        except OSError as exc:
+            self.error(self.translator.tr("error.save_settings", error=exc))
+
+    def set_notifications(self, value):
+        self.settings.notifications = value
+        self.save_settings()
+
+    def set_close_to_tray(self, value):
+        self.settings.close_to_tray = value
+        self.save_settings()
+
+
+    def set_fps(self, value):
+        self.settings.fps = int(value)
+        self.save_settings()
+
+    def refresh_monitors(self):
+        self.window.monitors.clear()
+        try:
+            for index, monitor in enumerate(monitors(), 1):
+                self.window.monitors.addItem(self.translator.tr("source.monitor_item", index=index, width=monitor["width"], height=monitor["height"], left=monitor["left"], top=monitor["top"]), monitor)
+            if not self.window.monitors.count():
+                raise RuntimeError(self.translator.tr("error.no_monitors"))
+            self.window.status.setText(self.translator.tr("status.ready"))
+        except Exception as exc:
+            self.window.status.setText(str(exc))
+        self.set_busy(False)
+
+    def set_busy(self, busy):
+        self.window.recordings.set_recording(busy)
+        can_start = not busy and bool(self.current_source())
+        self.window.start.setEnabled(can_start)
+        self.start_action.setEnabled(can_start)
+        self.window.stop.setEnabled(busy)
+        self.stop_action.setEnabled(busy)
+        self.configure_action.setEnabled(not busy)
+        self.import_profile_action.setEnabled(not busy)
+        self.filename_action.setEnabled(not busy)
+        self.window.filename_button.setEnabled(not busy)
+        self.overlay_action.setEnabled(not busy)
+        self.window.overlay_button.setEnabled(not busy)
+        self.window.overlay_enabled.setEnabled(not busy)
+        for widget in (self.window.monitors, self.window.refresh, self.window.fps, self.window.browse, self.window.configure, self.window.source_mode, self.window.window_list, self.window.select_region, self.window.export_extension):
+            widget.setEnabled(not busy)
+
+    def choose_folder(self):
+        folder = QFileDialog.getExistingDirectory(self.window, self.translator.tr("folder.recordings"), self.settings.output_dir)
+        if folder:
+            self.settings.output_dir = folder
+            self.window.folder.setText(folder)
+            self.window.recordings.set_directory(folder)
+            self.save_settings()
+
+    def open_folder(self):
+        try:
+            directory = Path(self.settings.output_dir)
+            directory.mkdir(parents=True, exist_ok=True)
+            if not QDesktopServices.openUrl(QUrl.fromLocalFile(str(directory.resolve()))):
+                raise OSError(self.translator.tr("error.open_file_manager"))
+        except OSError as exc:
+            self.error(str(exc))
+
+    def start_recording(self):
+        log.debug("Start recording requested")
+        if self.worker or self.exiting:
+            return
+        monitor = self.current_source()
+        if not monitor:
+            return
+        from .recorder.overlay import enabled as overlay_has_layers
+        overlay_layers = overlay_has_layers(self.settings.overlay)
+        log.info("Overlay configuration: switch=%s layers=%s image=%s text=%s",
+                 self.settings.overlay_enabled, overlay_layers,
+                 self.settings.overlay.get("image", {}).get("enabled", False),
+                 self.settings.overlay.get("text", {}).get("enabled", False))
+        if monitor.get("kind") == "tab":
+            from .recorder.browser_tab import BrowserWorker
+            self.window.pairing.clear()
+            self.worker = BrowserWorker(replace(self.settings), self)
+            self.worker.pairing_ready.connect(self.show_pairing)
+            self.worker.tab_selected.connect(lambda title: self.window.pairing.setToolTip(self.translator.tr("status.tab_recording") + " " + title))
+        else:
+            worker_settings = replace(self.settings)
+            prepared_overlay_path = None
+            if worker_settings.overlay_enabled:
+                from .recorder.overlay import enabled as overlay_enabled, prepare as prepare_overlay
+                if overlay_enabled(worker_settings.overlay):
+                    handle = None
+                    try:
+                        size = (monitor.get("width"), monitor.get("height"))
+                        if not all(size):
+                            raise ValueError(self.translator.tr("error.overlay_size"))
+                        from tempfile import NamedTemporaryFile
+                        import os
+                        handle = NamedTemporaryFile(prefix="screenrec-overlay-", suffix=".png", delete=False)
+                        handle.close()
+                        prepared_overlay_path = prepare_overlay(
+                            worker_settings.overlay, size[0], size[1], Path(handle.name))
+                        log.info("Overlay image prepared on UI thread: path=%s size=%sx%s",
+                                 prepared_overlay_path, size[0], size[1])
+                    except Exception as exc:
+                        if handle is not None:
+                            try:
+                                Path(handle.name).unlink()
+                            except OSError:
+                                log.exception("Could not remove failed overlay preparation")
+                        log.exception("Overlay preparation failed before recording")
+                        self.error(self.translator.tr("error.overlay_prepare", error=exc))
+                        return
+            self.worker = RecordingWorker(monitor, self.settings.output_dir, self.settings.fps, self,
+                                          settings=worker_settings, overlay_path=prepared_overlay_path)
+        self.worker.recording_started.connect(self.recording_started)
+        self.worker.recording_saved.connect(self.recording_saved)
+        self.worker.failed.connect(self.error)
+        self.worker.warning.connect(self.warning)
+        self.worker.finalizing.connect(self.finalizing)
+        self.worker.finished.connect(self.worker_finished)
+        self.set_busy(True)
+        self.window.status.setText(self.translator.tr("status.preparing"))
+        self.worker.start()
+
+    def finalizing(self):
+        log.info("Finalizing recording")
+        self.window.status.setText(self.translator.tr("status.processing"))
+        self.window.stop.setEnabled(False)
+        self.stop_action.setEnabled(False)
+
+    def recording_started(self, path):
+        log.info("Recording started: %s",path)
+        self.started_at = time.monotonic()
+        self.tray.setToolTip(self.translator.tr("tray.recording"))
+        self.notify(self.translator.tr("notify.started"), path)
+
+    def tick(self):
+        problem = hub.take_problem()
+        if problem:
+            self.settings.logging_enabled = False
+            self.save_settings()
+            QMessageBox.warning(self.window,self.translator.tr("logging.title"),problem)
+        if self.stop_deadline and time.monotonic() > self.stop_deadline:
+            encoder = self.worker.encoder if self.worker else None
+            if encoder:
+                encoder.abort()
+            self.stop_deadline = None
+        if self.started_at is not None and self.worker and not self.worker.stop_event.is_set():
+            elapsed = int(time.monotonic() - self.started_at)
+            self.window.status.setText(self.translator.tr("status.recording_time", hours=elapsed // 3600, minutes=elapsed // 60 % 60, seconds=elapsed % 60))
+
+    def stop_recording(self):
+        log.info("Stop recording requested")
+        if self.worker:
+            self.worker.stop()
+            if self.stop_deadline is None:
+                self.stop_deadline = time.monotonic() + 15
+            self.window.stop.setEnabled(False)
+            self.stop_action.setEnabled(False)
+            self.window.status.setText(self.translator.tr("status.finishing"))
+
+    def recording_saved(self, path):
+        log.info("Recording saved: %s",path)
+        self.window.status.setText(self.translator.tr("status.saved", path=path))
+        self.notify(self.translator.tr("notify.saved"), path)
+        self.window.recordings.refresh(select=path)
+
+    def worker_finished(self):
+        self.worker.wait()
+        self.worker.deleteLater()
+        self.worker = None
+        self.window.pairing.clear()
+        self.started_at = None
+        self.stop_deadline = None
+        self.tray.setToolTip(self.translator.tr("tray.ready"))
+        self.set_busy(False)
+        if self.exiting:
+            self.exit_application()
+
+    def notify(self, title, text):
+        if self.settings.notifications and self.tray.isVisible():
+            self.tray.showMessage(title, text)
+
+    def error(self, message):
+        log.error("Application error: %s",message)
+        self.window.status.setText(self.translator.tr("status.error", error=message))
+        self.notify(self.translator.tr("error.title"), message)
+        if not self.exiting:
+            self.show_window()
+            QMessageBox.warning(self.window, self.translator.tr("error.title"), message)
+
+    def warning(self, message):
+        log.warning("Recording completed with a warning: %s", message)
+        self.window.status.setText(self.translator.tr("status.saved_with_warning"))
+        if not self.exiting:
+            self.show_window()
+            QMessageBox.warning(self.window, self.translator.tr("error.title"), message)
+
+    def show_window(self):
+        self.window.showNormal()
+        self.window.raise_()
+        self.window.activateWindow()
+
+    def tray_activated(self, reason):
+        if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
+            self.show_window()
+
+    def close_window(self):
+        self.window.recordings.leave_fullscreen()
+        self.window.recordings.stop_playback()
+        log.debug("Window close requested; close_to_tray=%s",self.settings.close_to_tray)
+        if self.settings.close_to_tray and QSystemTrayIcon.isSystemTrayAvailable():
+            self.tray.show()
+            self.window.hide()
+            self.notify(self.translator.tr("tray.running"), self.translator.tr("tray.exit_hint"))
+        else:
+            self.request_exit()
+
+    def exit_application(self):
+        log.info("Application exit dispatched")
+        self.window.hide()
+        self.application.exit(0)
+
+    def request_exit(self, checked=False, *, confirm=True):
+        if self.exiting:
+            return
+        if self.worker and confirm:
+            answer = QMessageBox.question(self.window, self.translator.tr("exit.title"),
+                self.translator.tr("exit.confirm"),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No)
+            if answer != QMessageBox.StandardButton.Yes:
+                return
+        log.info("Application exit requested")
+        self.exiting = True
+        self.start_action.setEnabled(False)
+        if self.worker:
+            self.stop_recording()
+        else:
+            self.exit_application()
+
+    def cleanup(self):
+        if self.worker and self.worker.isRunning():
+            self.worker.stop()
+            if not self.worker.wait(15000):
+                encoder = self.worker.encoder
+                if encoder:
+                    encoder.abort()
+                self.worker.wait()
+        self.window.recordings.shutdown()
+        self.tray.hide()
+        log.info("Application cleanup complete")
+        close_log()

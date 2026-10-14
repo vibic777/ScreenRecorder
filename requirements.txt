@@ -1,0 +1,11 @@
+PySide6>=6.8,<7
+mss>=10.2,<11
+imageio-ffmpeg>=0.6,<0.7
+platformdirs>=4,<5
+SoundCard>=0.4.5,<0.5; sys_platform == 'linux'
+PyAudioWPatch>=0.2.12.8,<0.3; sys_platform == 'win32'
+numpy>=2,<3
+PyInstaller>=6.16,<7
+windows-capture>=2.0.1,<2.1; sys_platform == 'win32'
+python-xlib>=0.33,<0.34; sys_platform == 'linux'
+# Browser integration tests: see requirements-dev.txt (development only).

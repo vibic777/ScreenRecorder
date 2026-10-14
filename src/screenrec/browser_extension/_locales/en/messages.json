@@ -1,0 +1,77 @@
+{
+  "extensionName": {
+    "message": "ScreenRec — Tab Recorder"
+  },
+  "extensionDescription": {
+    "message": "Transfer the selected tab locally to ScreenRec. No cloud."
+  },
+  "captureDenied": {
+    "message": "The browser denied tab capture"
+  },
+  "stalePairing": {
+    "message": "Code expired or app unavailable"
+  },
+  "invalidPairing": {
+    "message": "Invalid connection code"
+  },
+  "tabAlreadyRecording": {
+    "message": "This tab is already being recorded. Stop it first."
+  },
+  "uploadBehind": {
+    "message": "Video transfer is falling behind. Reduce quality."
+  },
+  "tabDefault": {
+    "message": "Tab"
+  },
+  "bridgeError": {
+    "message": "ScreenRec connection error: "
+  },
+  "encoderError": {
+    "message": "Browser encoder error"
+  },
+  "startTabSession": {
+    "message": "Start a new tab session in ScreenRec"
+  },
+  "alreadyRecording": {
+    "message": "Recording is already active"
+  },
+  "webmUnsupported": {
+    "message": "The browser does not support WebM recording"
+  },
+  "bridgeJustification": {
+    "message": "Transfer selected tab locally to ScreenRec"
+  },
+  "popupStart": {
+    "message": "Connect and record this tab"
+  },
+  "popupTitle": {
+    "message": "Record this tab"
+  },
+  "popupConnecting": {
+    "message": "Connecting…"
+  },
+  "popupNoActive": {
+    "message": "No active recording"
+  },
+  "popupCode": {
+    "message": "Connection code"
+  },
+  "popupStopping": {
+    "message": "Stopping recording…"
+  },
+  "popupConnectError": {
+    "message": "Could not connect"
+  },
+  "popupPlaceholder": {
+    "message": "port:code"
+  },
+  "popupHint": {
+    "message": "In ScreenRec select Browser tab, click Start recording, and copy the connection code."
+  },
+  "popupStarted": {
+    "message": "Recording started. You can switch to other tabs."
+  },
+  "popupStop": {
+    "message": "Stop tab recording"
+  }
+}
