@@ -4,6 +4,10 @@
 **GitHub About / English:** A practical screen recorder that has already proved useful. A light OBS for home: still being refined, and it already works well.
 **Описание GitHub / Русский:** Прикладная запись экрана, которая уже пригодилась. Лёгкий OBS для дома: ещё дорабатывается, но уже работает неплохо.
 
+**Лицензия:** [PolyForm Noncommercial 1.0.0](LICENSE). Некоммерческое использование разрешено. Коммерческое использование — только по отдельному соглашению с vibic777.
+**License:** [PolyForm Noncommercial 1.0.0](LICENSE). Noncommercial use is allowed. Commercial use requires a separate agreement with vibic777.
+
+
 A practical tool that has already earned its place. It is meant to be useful to other people too: a small OBS Studio, light enough for ordinary recording at home. There is more to refine, and it already works well.
 
 ScreenRec is a Windows desktop screen recorder built with Python, Qt and FFmpeg. It ships as two builds: Modern (Python 3.13, PySide6/Qt 6) for Windows 10/11 x64 and Legacy (Python 3.8, PySide2/Qt 5) for Windows 8/8.1 x64.
